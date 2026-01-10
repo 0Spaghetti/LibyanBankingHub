@@ -105,6 +105,9 @@ class _MainControllerState extends ConsumerState<MainController> {
   // Search state
   bool _isSearching = false;
   Timer? _debounce;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearchFocused = false;
 
   final List<String> _cities = [
     'الكل',
@@ -123,8 +126,20 @@ class _MainControllerState extends ConsumerState<MainController> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(() {
+      setState(() {
+        _isSearchFocused = _searchFocusNode.hasFocus;
+      });
+    });
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -141,6 +156,11 @@ class _MainControllerState extends ConsumerState<MainController> {
         _isSearching = false;
       });
     });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _onSearchChanged('');
   }
 
   @override
@@ -315,21 +335,38 @@ class _MainControllerState extends ConsumerState<MainController> {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: TextField(
-                      onChanged: _onSearchChanged,
-                      textAlign: TextAlign.start,
-                      decoration: InputDecoration(
-                        prefixIcon: _isSearching 
-                          ? const Padding(
-                              padding: EdgeInsets.all(12.0),
-                              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                            )
-                          : const Icon(Icons.search),
-                        hintText: "ابحث عن مصرف أو عنوان...",
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        filled: true,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: _isSearchFocused 
+                        ? const EdgeInsets.symmetric(horizontal: 4) 
+                        : EdgeInsets.zero,
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: _onSearchChanged,
+                        textAlign: TextAlign.start,
+                        decoration: InputDecoration(
+                          prefixIcon: _isSearching 
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                              )
+                            : const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: _clearSearch,
+                              )
+                            : null,
+                          hintText: "ابحث عن مصرف أو عنوان...",
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Colors.green, width: 2)),
+                          filled: true,
+                        ),
                       ),
                     ),
                   ),
