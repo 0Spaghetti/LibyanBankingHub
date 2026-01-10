@@ -1,0 +1,37 @@
+name: libyan_banking_hub
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^6.0.0       # بديل Leaflet للخرائط
+  latlong2: ^0.9.0          # للتعامل مع الإحداثيات
+  google_generative_ai: ^0.2.0 # لخدمة Gemini
+  url_launcher: ^6.1.11     # لفتح الروابط (مثل خرائط جوجل)
+  intl: ^0.18.0             # لتنسيق التواريخ
+  cupertino_icons: ^1.0.8
+  shimmer: ^3.0.0
+  animations: ^2.0.11
+  flutter_riverpod: ^2.4.9
+  fl_chart: ^0.66.0
+  geolocator: ^11.0.0
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+
+  uses-material-design: true
