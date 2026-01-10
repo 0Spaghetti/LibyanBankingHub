@@ -4,11 +4,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:libyan_banking_hub/models/models.dart';
+import 'package:libyan_banking_hub/components/branch_widgets.dart';
 
 class BranchMap extends StatefulWidget {
   final List<Branch> branches;
+  final Function(Branch)? onViewDetails;
 
-  const BranchMap({super.key, required this.branches});
+  const BranchMap({super.key, required this.branches, this.onViewDetails});
 
   @override
   State<BranchMap> createState() => _BranchMapState();
@@ -18,6 +20,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
   LatLng? _userLocation;
   final MapController _mapController = MapController();
   final LatLng _defaultLocation = const LatLng(32.8872, 13.1913);
+  Branch? _selectedBranch;
 
   @override
   void initState() {
@@ -43,9 +46,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
     });
 
     animation.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        controller.dispose();
-      } else if (status == AnimationStatus.dismissed) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
         controller.dispose();
       }
     });
@@ -88,6 +89,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
           options: MapOptions(
             initialCenter: _defaultLocation,
             initialZoom: 13.0,
+            onTap: (_, __) => setState(() => _selectedBranch = null),
           ),
           children: [
             TileLayer(
@@ -115,21 +117,26 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
                       statusColor = Colors.grey;
                   }
 
+                  final isSelected = _selectedBranch?.id == branch.id;
+
                   return Marker(
                     point: LatLng(branch.lat, branch.lng),
-                    width: 50,
-                    height: 50,
+                    width: isSelected ? 70 : 50,
+                    height: isSelected ? 70 : 50,
                     child: GestureDetector(
                       onTap: () {
+                        setState(() => _selectedBranch = branch);
                         _animatedMapMove(LatLng(branch.lat, branch.lng), 15.0);
-                        _showBranchInfo(context, branch);
                       },
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          Container(
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: isSelected ? 70 : 50,
+                            height: isSelected ? 70 : 50,
                             decoration: BoxDecoration(
-                              color: statusColor.withAlpha(100),
+                              color: (isSelected ? Colors.blue : statusColor).withAlpha(100),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -139,12 +146,12 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
                             decoration: BoxDecoration(
                               color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
                               shape: BoxShape.circle,
-                              border: Border.all(color: statusColor, width: 2),
+                              border: Border.all(color: isSelected ? Colors.blue : statusColor, width: 2),
                             ),
                             child: Icon(
                               branch.isAtm ? Icons.atm : Icons.account_balance,
                               size: 20,
-                              color: statusColor,
+                              color: isSelected ? Colors.blue : statusColor,
                             ),
                           ),
                         ],
@@ -183,8 +190,98 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
             ),
           ],
         ),
-        Positioned(
-          bottom: 20,
+        
+        // Persistent Bottom Sheet for Selected Branch
+        if (_selectedBranch != null)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 300),
+              tween: Tween(begin: 1.0, end: 0.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, value * 200),
+                  child: child,
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10, offset: const Offset(0, -5))
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(_selectedBranch!.name,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _selectedBranch = null),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(_selectedBranch!.address, style: const TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              showReportDialog(context, _selectedBranch!, (id, status) {
+                                setState(() => _selectedBranch = null);
+                              });
+                            },
+                            icon: const Icon(Icons.report_problem_outlined),
+                            label: const Text("إبلاغ"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange, 
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              if (widget.onViewDetails != null) {
+                                widget.onViewDetails!(_selectedBranch!);
+                              }
+                            },
+                            icon: const Icon(Icons.info_outline),
+                            label: const Text("تفاصيل"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green, 
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+        // Map Control Buttons
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          bottom: _selectedBranch != null ? 200 : 20,
           right: 20,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -208,77 +305,6 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
           ),
         ),
       ],
-    );
-  }
-
-  void _showBranchInfo(BuildContext context, Branch branch) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 20, spreadRadius: 5)
-          ]
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(branch.name,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                if (branch.isAtm)
-                  Chip(
-                    label: const Text("ATM", style: TextStyle(fontSize: 10)), 
-                    backgroundColor: Colors.blue.withAlpha(50),
-                    side: BorderSide.none,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 18, color: Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(child: Text(branch.address, style: const TextStyle(color: Colors.grey))),
-              ],
-            ),
-            const Divider(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("حالة السيولة", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Text(branch.status == LiquidityStatus.available ? "متوفرة" : "مزدحمة", 
-                        style: TextStyle(fontWeight: FontWeight.bold, color: branch.status == LiquidityStatus.available ? Colors.green : Colors.orange)),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.check),
-                  label: const Text("تم"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                  ),
-                )
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

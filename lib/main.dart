@@ -49,32 +49,38 @@ class _LibyanBankingAppState extends State<LibyanBankingApp> {
       themeMode: _themeMode,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.green,
+        colorSchemeSeed: const Color(0xFF4CAF50),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         appBarTheme: const AppBarTheme(
           surfaceTintColor: Colors.transparent,
+          backgroundColor: Colors.transparent,
           centerTitle: true,
+        ),
+        cardTheme: const CardThemeData(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
+        scaffoldBackgroundColor: const Color(0xFF020617), // Deep Midnight
         appBarTheme: const AppBarTheme(
           surfaceTintColor: Colors.transparent,
-          backgroundColor: Color(0xFF1E1E1E),
+          backgroundColor: Color(0xFF020617),
           centerTitle: true,
         ),
         cardTheme: const CardThemeData(
           surfaceTintColor: Colors.transparent,
-          color: Color(0xFF1E1E1E),
+          color: Color(0xFF0F172A), // Midnight Blue component
         ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
+          seedColor: const Color(0xFF4CAF50),
           brightness: Brightness.dark,
-          surface: const Color(0xFF1E1E1E),
-          onSurface: const Color(0xFFE0E0E0),
-          primary: Colors.green[400]!,
-          secondary: Colors.greenAccent[700]!,
+          surface: const Color(0xFF0F172A),
+          onSurface: const Color(0xFFF1F5F9),
+          primary: const Color(0xFF4CAF50),
+          secondary: const Color(0xFF22C55E),
         ),
       ),
       locale: const Locale('ar'),
@@ -98,7 +104,7 @@ class _MainControllerState extends ConsumerState<MainController> {
   Bank? _selectedBank;
 
   String _searchTerm = '';
-  String _homeTab = 'ALL';
+  String _homeTab = 'ALL'; // ALL, FAVORITES
   String _selectedCity = 'الكل';
   bool _showAvailableOnly = false;
   
@@ -199,83 +205,94 @@ class _MainControllerState extends ConsumerState<MainController> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("دليلي المصرفي", style: TextStyle(fontWeight: FontWeight.bold)),
-            if (reportCount >= 3)
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                    color: Colors.amber,
-                    borderRadius: BorderRadius.circular(12)),
-                child: const Row(
-                  children: [
-                    Icon(Icons.verified, size: 12, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text("موثوق",
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )
-          ],
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: const Text(
+          "دليلي المصرفي",
+          style: TextStyle(
+            color: Color(0xFF4CAF50),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Theme.of(context).brightness == Brightness.dark
-                ? Icons.light_mode
-                : Icons.dark_mode),
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              widget.toggleTheme();
-            },
-          ),
-          if (_view != 'MAP')
-            IconButton(
-                icon: const Icon(Icons.map),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? const Color(0xFF1E293B) // Slate blue
+                    : const Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: Icon(Theme.of(context).brightness == Brightness.dark
+                    ? Icons.wb_sunny_outlined
+                    : Icons.dark_mode_outlined, size: 20),
                 onPressed: () {
-                  HapticFeedback.lightImpact();
-                  setState(() => _view = 'MAP');
-                }),
+                  HapticFeedback.mediumImpact();
+                  widget.toggleTheme();
+                },
+              ),
+            ),
+          ),
         ],
+        centerTitle: false,
       ),
       body: PageTransitionSwitcher(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 400),
         reverse: _view == 'HOME',
         transitionBuilder: (child, animation, secondaryAnimation) {
           return SharedAxisTransition(
             animation: animation,
             secondaryAnimation: secondaryAnimation,
-            transitionType: SharedAxisTransitionType.horizontal,
-            child: child,
+            transitionType: SharedAxisTransitionType.scaled,
+            child: FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.0, 0.05),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
           );
         },
         child: _buildBody(),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex:
-            _view == 'MAP' ? 1 : _view == 'ADD' ? 2 : _view == 'EMERGENCY' ? 3 : _view == 'PROFILE' ? 4 : 0,
-        onDestinationSelected: (idx) {
-          HapticFeedback.selectionClick();
-          setState(() {
-            if (idx == 0) _view = 'HOME';
-            if (idx == 1) _view = 'MAP';
-            if (idx == 2) _view = 'ADD';
-            if (idx == 3) _view = 'EMERGENCY';
-            if (idx == 4) _view = 'PROFILE';
-          });
-        },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: "الرئيسية"),
-          NavigationDestination(icon: Icon(Icons.map), label: "الخريطة"),
-          NavigationDestination(icon: Icon(Icons.add), label: "إضافة"),
-          NavigationDestination(icon: Icon(Icons.phone), label: "طوارئ"),
-          NavigationDestination(icon: Icon(Icons.person), label: "حسابي"),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, -5))
+          ],
+        ),
+        child: NavigationBar(
+          height: 80,
+          elevation: 0,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark 
+              ? const Color(0xFF0F172A) 
+              : Colors.white,
+          selectedIndex:
+              _view == 'MAP' ? 1 : _view == 'ADD' ? 2 : _view == 'EMERGENCY' ? 3 : _view == 'PROFILE' ? 4 : 0,
+          onDestinationSelected: (idx) {
+            HapticFeedback.selectionClick();
+            setState(() {
+              if (idx == 0) _view = 'HOME';
+              if (idx == 1) _view = 'MAP';
+              if (idx == 2) _view = 'ADD';
+              if (idx == 3) _view = 'EMERGENCY';
+              if (idx == 4) _view = 'PROFILE';
+            });
+          },
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: Colors.green), label: "الرئيسية"),
+            NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map, color: Colors.green), label: "الخريطة"),
+            NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle, color: Colors.green), label: "إضافة"),
+            NavigationDestination(icon: Icon(Icons.phone_outlined), selectedIcon: Icon(Icons.phone, color: Colors.green), label: "طوارئ"),
+            NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person, color: Colors.green), label: "حسابي"),
+          ],
+        ),
       ),
     );
   }
@@ -283,7 +300,28 @@ class _MainControllerState extends ConsumerState<MainController> {
   Widget _buildBody() {
     switch (_view) {
       case 'MAP':
-        return BranchMap(branches: ref.watch(branchesProvider));
+        final branches = ref.watch(branchesProvider);
+        final banks = ref.watch(banksProvider);
+        return BranchMap(
+          branches: branches,
+          onViewDetails: (branch) {
+            final bank = banks.firstWhere((b) => b.id == branch.bankId);
+            _selectedBank = bank;
+            Navigator.of(context).push(
+              PageRouteBuilder(
+                pageBuilder: (context, _, __) => BankDetailsScreen(bank: bank),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return SharedAxisTransition(
+                    animation: animation,
+                    secondaryAnimation: secondaryAnimation,
+                    transitionType: SharedAxisTransitionType.horizontal,
+                    child: child,
+                  );
+                },
+              ),
+            );
+          },
+        );
       case 'EMERGENCY':
         return _buildEmergencyContacts();
       case 'PROFILE':
@@ -304,7 +342,6 @@ class _MainControllerState extends ConsumerState<MainController> {
       
       bool matchesSearch = _searchTerm.isEmpty || bank.name.contains(_searchTerm);
       if (!matchesSearch && _searchTerm.isNotEmpty) {
-        // Check if any of its branches matches the address or name
         matchesSearch = branches.any((branch) => 
           branch.bankId == bank.id && (branch.address.contains(_searchTerm) || branch.name.contains(_searchTerm))
         );
@@ -315,7 +352,6 @@ class _MainControllerState extends ConsumerState<MainController> {
       if (_selectedCity != 'الكل' && !bank.city.contains(_selectedCity))
         return false;
 
-      // Available Liquidity Filter Logic
       if (_showAvailableOnly) {
         final hasLiquidity = branches.any((b) => b.bankId == bank.id && b.status == LiquidityStatus.available);
         if (!hasLiquidity) return false;
@@ -324,116 +360,141 @@ class _MainControllerState extends ConsumerState<MainController> {
       return true;
     }).toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
-        _buildCurrencyWidget(),
+        // Tab Switcher
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: _isSearchFocused 
-                        ? const EdgeInsets.symmetric(horizontal: 4) 
-                        : EdgeInsets.zero,
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        onChanged: _onSearchChanged,
-                        textAlign: TextAlign.start,
-                        decoration: InputDecoration(
-                          prefixIcon: _isSearching 
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                              )
-                            : const Icon(Icons.search),
-                          suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: _clearSearch,
-                              )
-                            : null,
-                          hintText: "ابحث عن مصرف أو عنوان...",
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: Colors.green, width: 2)),
-                          filled: true,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Container(
+            height: 55,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9), 
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _homeTab = 'ALL');
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _homeTab == 'ALL' 
+                            ? (isDark ? const Color(0xFF020617) : Colors.white) 
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _homeTab == 'ALL' ? [
+                          BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4)
+                        ] : [],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        "جميع المصارف",
+                        style: TextStyle(
+                          color: _homeTab == 'ALL' ? (isDark ? Colors.white : Colors.black) : Colors.grey,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedCity,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        filled: true,
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _homeTab = 'FAVORITES');
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _homeTab == 'FAVORITES' 
+                            ? (isDark ? const Color(0xFF020617) : Colors.white) 
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _homeTab == 'FAVORITES' ? [
+                          BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4)
+                        ] : [],
                       ),
-                      items: _cities
-                          .map((city) => DropdownMenuItem(
-                              value: city,
-                              child: Text(city, style: const TextStyle(fontSize: 12))))
-                          .toList(),
-                      onChanged: (v) => setState(() => _selectedCity = v!),
+                      alignment: Alignment.center,
+                      child: Text(
+                        "المفضلة",
+                        style: TextStyle(
+                          color: _homeTab == 'FAVORITES' ? (isDark ? Colors.white : Colors.black) : Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Search Bar & Filter Row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              // Filter Button
+              Container(
+                width: 55,
+                height: 55,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0), width: 1),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.tune, color: isDark ? Colors.white70 : Colors.black54),
+                  onPressed: () {
+                    _showFilterOptions(context);
+                  },
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  FilterChip(
-                    label: const Text("السيولة المتوفرة فقط", style: TextStyle(fontSize: 12)),
-                    selected: _showAvailableOnly,
-                    onSelected: (val) {
-                      HapticFeedback.lightImpact();
-                      setState(() => _showAvailableOnly = val);
-                    },
-                    selectedColor: Colors.green.withAlpha(100),
-                    checkmarkColor: Colors.green,
+              const SizedBox(width: 12),
+              // Search Input
+              Expanded(
+                child: Container(
+                  height: 55,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0), width: 1),
                   ),
-                ],
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    textAlign: TextAlign.start,
+                    decoration: InputDecoration(
+                      hintText: "ابحث عن مصرف أو مدينة...",
+                      hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      suffixIcon: _isSearching 
+                        ? const Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : (_searchController.text.isNotEmpty 
+                            ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: _clearSearch) 
+                            : null),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
         ),
-        Row(
-          children: [
-            Expanded(
-                child: TextButton(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _homeTab = 'ALL');
-                    },
-                    child: Text("الكل",
-                        style: TextStyle(
-                            fontWeight: _homeTab == 'ALL'
-                                ? FontWeight.bold
-                                : FontWeight.normal)))),
-            Expanded(
-                child: TextButton(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _homeTab = 'FAVORITES');
-                    },
-                    child: Text("المفضلة",
-                        style: TextStyle(
-                            fontWeight: _homeTab == 'FAVORITES'
-                                ? FontWeight.bold
-                                : FontWeight.normal)))),
-          ],
-        ),
+
+        _buildCurrencyWidget(),
+
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -497,15 +558,57 @@ class _MainControllerState extends ConsumerState<MainController> {
     );
   }
 
+  void _showFilterOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("خيارات التصفية", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCity,
+              decoration: InputDecoration(
+                labelText: "المدينة",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              items: _cities
+                  .map((city) => DropdownMenuItem(
+                      value: city,
+                      child: Text(city)))
+                  .toList(),
+              onChanged: (v) {
+                setState(() => _selectedCity = v!);
+                Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text("السيولة المتوفرة فقط"),
+              value: _showAvailableOnly,
+              onChanged: (v) {
+                setState(() => _showAvailableOnly = v);
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCurrencyWidget() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.green[900]!.withAlpha(100) : Colors.green.withAlpha(20),
+        color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDarkMode ? Colors.green[700]! : Colors.green.withAlpha(50)),
+        border: Border.all(color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -589,7 +692,7 @@ class _MainControllerState extends ConsumerState<MainController> {
             setState(() => _view = 'AUTH');
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red[900]!.withAlpha(50), 
+            backgroundColor: Colors.red.withAlpha(20), 
             foregroundColor: Colors.red,
             side: const BorderSide(color: Colors.red),
           ),
@@ -601,7 +704,13 @@ class _MainControllerState extends ConsumerState<MainController> {
 
   void _showToast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg, textAlign: TextAlign.center), backgroundColor: Colors.green));
+        SnackBar(
+          content: Text(msg, textAlign: TextAlign.center), 
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 100, left: 24, right: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
   }
 }
 
@@ -631,12 +740,10 @@ class BankDetailsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDarkMode ? Colors.green[900]!.withAlpha(100) : Theme.of(context).primaryColor.withAlpha((255 * 0.1).round()),
+              color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: isDarkMode ? Colors.green[700]! : Theme.of(context)
-                      .primaryColor
-                      .withAlpha((255 * 0.3).round())),
+                  color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,10 +788,13 @@ class BankDetailsScreen extends ConsumerWidget {
                   
                   // Visual confirmation Toast
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("شكراً لمساهمتك! تم تحديث حالة السيولة.", textAlign: TextAlign.center),
+                    SnackBar(
+                      content: const Text("شكراً لمساهمتك! تم تحديث حالة السيولة.", textAlign: TextAlign.center),
                       backgroundColor: Colors.green,
-                      duration: Duration(seconds: 2),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.only(bottom: 100, left: 24, right: 24),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   );
                 }),
@@ -729,9 +839,10 @@ class ShimmerLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
-      baseColor: Colors.grey[800]!,
-      highlightColor: Colors.grey[700]!,
+      baseColor: isDark ? const Color(0xFF1E293B) : Colors.grey[300]!,
+      highlightColor: isDark ? const Color(0xFF0F172A) : Colors.grey[100]!,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
