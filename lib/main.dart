@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animations/animations.dart';
@@ -100,6 +101,10 @@ class _MainControllerState extends ConsumerState<MainController> {
   String _homeTab = 'ALL';
   String _selectedCity = 'الكل';
   bool _showAvailableOnly = false;
+  
+  // Search state
+  bool _isSearching = false;
+  Timer? _debounce;
 
   final List<String> _cities = [
     'الكل',
@@ -116,6 +121,27 @@ class _MainControllerState extends ConsumerState<MainController> {
     {"name": "مصرف الصحارى - بلاغات فقدان", "number": "1234"},
     {"name": "مركز البطاقات المصرفية", "number": "8888"},
   ];
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    setState(() {
+      _isSearching = true;
+    });
+
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _searchTerm = query;
+        _isSearching = false;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -290,10 +316,15 @@ class _MainControllerState extends ConsumerState<MainController> {
                   Expanded(
                     flex: 2,
                     child: TextField(
-                      onChanged: (v) => setState(() => _searchTerm = v),
+                      onChanged: _onSearchChanged,
                       textAlign: TextAlign.start,
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
+                        prefixIcon: _isSearching 
+                          ? const Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                            )
+                          : const Icon(Icons.search),
                         hintText: "ابحث عن مصرف أو عنوان...",
                         contentPadding: const EdgeInsets.symmetric(vertical: 0),
                         border: OutlineInputBorder(
