@@ -57,7 +57,6 @@ class _LibyanBankingAppState extends State<LibyanBankingApp> {
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorSchemeSeed: Colors.green,
         scaffoldBackgroundColor: const Color(0xFF121212),
         appBarTheme: const AppBarTheme(
           surfaceTintColor: Colors.transparent,
@@ -100,6 +99,7 @@ class _MainControllerState extends ConsumerState<MainController> {
   String _searchTerm = '';
   String _homeTab = 'ALL';
   String _selectedCity = 'الكل';
+  bool _showAvailableOnly = false;
 
   final List<String> _cities = [
     'الكل',
@@ -268,6 +268,13 @@ class _MainControllerState extends ConsumerState<MainController> {
 
       if (_selectedCity != 'الكل' && !bank.city.contains(_selectedCity))
         return false;
+
+      // Available Liquidity Filter Logic
+      if (_showAvailableOnly) {
+        final hasLiquidity = branches.any((b) => b.bankId == bank.id && b.status == LiquidityStatus.available);
+        if (!hasLiquidity) return false;
+      }
+
       return true;
     }).toList();
 
@@ -276,40 +283,59 @@ class _MainControllerState extends ConsumerState<MainController> {
         _buildCurrencyWidget(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  onChanged: (v) => setState(() => _searchTerm = v),
-                  textAlign: TextAlign.start,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: "ابحث عن مصرف أو عنوان...",
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    filled: true,
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      onChanged: (v) => setState(() => _searchTerm = v),
+                      textAlign: TextAlign.start,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: "ابحث عن مصرف أو عنوان...",
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedCity,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                      ),
+                      items: _cities
+                          .map((city) => DropdownMenuItem(
+                              value: city,
+                              child: Text(city, style: const TextStyle(fontSize: 12))))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedCity = v!),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _selectedCity,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    filled: true,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  FilterChip(
+                    label: const Text("السيولة المتوفرة فقط", style: TextStyle(fontSize: 12)),
+                    selected: _showAvailableOnly,
+                    onSelected: (val) {
+                      HapticFeedback.lightImpact();
+                      setState(() => _showAvailableOnly = val);
+                    },
+                    selectedColor: Colors.green.withAlpha(100),
+                    checkmarkColor: Colors.green,
                   ),
-                  items: _cities
-                      .map((city) => DropdownMenuItem(
-                          value: city,
-                          child: Text(city, style: const TextStyle(fontSize: 12))))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCity = v!),
-                ),
+                ],
               ),
             ],
           ),
@@ -584,6 +610,15 @@ class BankDetailsScreen extends ConsumerWidget {
                       .read(branchesProvider.notifier)
                       .updateBranchStatus(id, status);
                   ref.read(reportCountProvider.notifier).increment();
+                  
+                  // Visual confirmation Toast
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("شكراً لمساهمتك! تم تحديث حالة السيولة.", textAlign: TextAlign.center),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
                 }),
               ))
         ],
