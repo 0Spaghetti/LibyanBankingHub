@@ -14,14 +14,43 @@ class BranchMap extends StatefulWidget {
   State<BranchMap> createState() => _BranchMapState();
 }
 
-class _BranchMapState extends State<BranchMap> {
+class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
   LatLng? _userLocation;
   final MapController _mapController = MapController();
+  final LatLng _defaultLocation = const LatLng(32.8872, 13.1913);
 
   @override
   void initState() {
     super.initState();
     _determinePosition();
+  }
+
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    final latTween = Tween<double>(
+        begin: _mapController.camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(
+        begin: _mapController.camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom);
+
+    final controller = AnimationController(
+        duration: const Duration(milliseconds: 1000), vsync: this);
+    final animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      _mapController.move(
+          LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+          zoomTween.evaluate(animation));
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        controller.dispose();
+      } else if (status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
   }
 
   Future<void> _determinePosition() async {
@@ -44,7 +73,7 @@ class _BranchMapState extends State<BranchMap> {
       setState(() {
         _userLocation = LatLng(position.latitude, position.longitude);
       });
-      _mapController.move(_userLocation!, 13.0);
+      _animatedMapMove(_userLocation!, 14.0);
     }
   }
 
@@ -56,8 +85,8 @@ class _BranchMapState extends State<BranchMap> {
       children: [
         FlutterMap(
           mapController: _mapController,
-          options: const MapOptions(
-            initialCenter: LatLng(32.8872, 13.1913),
+          options: MapOptions(
+            initialCenter: _defaultLocation,
             initialZoom: 13.0,
           ),
           children: [
@@ -91,7 +120,10 @@ class _BranchMapState extends State<BranchMap> {
                     width: 50,
                     height: 50,
                     child: GestureDetector(
-                      onTap: () => _showBranchInfo(context, branch),
+                      onTap: () {
+                        _animatedMapMove(LatLng(branch.lat, branch.lng), 15.0);
+                        _showBranchInfo(context, branch);
+                      },
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -154,11 +186,25 @@ class _BranchMapState extends State<BranchMap> {
         Positioned(
           bottom: 20,
           right: 20,
-          child: FloatingActionButton(
-            onPressed: _determinePosition,
-            mini: true,
-            backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-            child: const Icon(Icons.my_location, color: Colors.blue),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton(
+                heroTag: "reset_view",
+                onPressed: () => _animatedMapMove(_defaultLocation, 13.0),
+                mini: true,
+                backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                child: const Icon(Icons.home, color: Colors.green),
+              ),
+              const SizedBox(height: 10),
+              FloatingActionButton(
+                heroTag: "my_location",
+                onPressed: _determinePosition,
+                mini: true,
+                backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                child: const Icon(Icons.my_location, color: Colors.blue),
+              ),
+            ],
           ),
         ),
       ],
@@ -168,37 +214,68 @@ class _BranchMapState extends State<BranchMap> {
   void _showBranchInfo(BuildContext context, Branch branch) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 20, spreadRadius: 5)
+          ]
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(branch.name,
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text(branch.address, textAlign: TextAlign.right),
-            const SizedBox(height: 10),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.update, size: 16, color: Colors.grey),
-                const SizedBox(width: 5),
-                Text("آخر تحديث: ${branch.lastUpdate.hour}:${branch.lastUpdate.minute}",
-                    style: const TextStyle(color: Colors.grey)),
+                Text(branch.name,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                if (branch.isAtm)
+                  Chip(
+                    label: const Text("ATM", style: TextStyle(fontSize: 10)), 
+                    backgroundColor: Colors.blue.withAlpha(50),
+                    side: BorderSide.none,
+                  ),
               ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50)),
-              child: const Text("إغلاق"),
-            )
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 18, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(child: Text(branch.address, style: const TextStyle(color: Colors.grey))),
+              ],
+            ),
+            const Divider(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("حالة السيولة", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(branch.status == LiquidityStatus.available ? "متوفرة" : "مزدحمة", 
+                        style: TextStyle(fontWeight: FontWeight.bold, color: branch.status == LiquidityStatus.available ? Colors.green : Colors.orange)),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.check),
+                  label: const Text("تم"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  ),
+                )
+              ],
+            ),
           ],
         ),
       ),
