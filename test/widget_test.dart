@@ -6,17 +6,20 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:libyan_banking_hub/main.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:libyan_banking_hub/app.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const LibyanBankingApp());
+    // We wrap it in ProviderScope because the app uses Riverpod.
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: LibyanBankingApp(),
+      ),
+    );
 
-    // Verify that splash screen is shown or main title
-    // Since the app starts with SPLASH view, we might want to check for something in SplashScreen
-    // For now, just checking if the app pumps without error.
+    // Verify that the app builds without crashing.
     expect(find.byType(LibyanBankingApp), findsOneWidget);
   });
 }

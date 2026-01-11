@@ -4,21 +4,6 @@ import 'package:libyan_banking_hub/theme/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart' as intl;
 
-// --- Helpers ---
-
-String getStatusText(LiquidityStatus status) {
-  switch (status) {
-    case LiquidityStatus.available:
-      return "سيولة متوفرة";
-    case LiquidityStatus.crowded:
-      return "مزدحم";
-    case LiquidityStatus.empty:
-      return "فارغ";
-    default:
-      return "غير معروف";
-  }
-}
-
 class StatusBadge extends StatelessWidget {
   final LiquidityStatus status;
 
@@ -27,42 +12,20 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    Color bgColor;
-    Color textColor;
-
-    switch (status) {
-      case LiquidityStatus.available:
-        bgColor = isDark ? AppColors.green900.withAlpha(128) : AppColors.green100;
-        textColor = isDark ? AppColors.green300 : AppColors.green800;
-        break;
-      case LiquidityStatus.crowded:
-        bgColor = isDark ? AppColors.yellow900.withAlpha(128) : AppColors.yellow100;
-        textColor = isDark ? AppColors.yellow300 : AppColors.yellow800;
-        break;
-      case LiquidityStatus.empty:
-        bgColor = isDark ? AppColors.red900.withAlpha(128) : AppColors.red100;
-        textColor = isDark ? AppColors.red300 : AppColors.red800;
-        break;
-      default:
-        bgColor = isDark ? AppColors.gray700 : AppColors.gray100;
-        textColor = isDark ? AppColors.gray200 : AppColors.gray800;
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: status.backgroundColor(isDark),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        getStatusText(status),
-        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
+        status.label,
+        style: TextStyle(color: status.color(isDark), fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }
 }
 
-// كارت الفرع المطور
 class BranchCard extends StatelessWidget {
   final Branch branch;
   final Function(Branch) onReport;
@@ -74,8 +37,6 @@ class BranchCard extends StatelessWidget {
         Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
     if (await canLaunchUrl(googleMapsUrl)) {
       await launchUrl(googleMapsUrl);
-    } else {
-      throw 'Could not open the map.';
     }
   }
 
@@ -101,7 +62,6 @@ class BranchCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Header Section
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -151,13 +111,10 @@ class BranchCard extends StatelessWidget {
                 IconButton(
                   onPressed: () => _openMap(branch.lat, branch.lng),
                   icon: const Icon(Icons.directions, color: Colors.blue),
-                  tooltip: "الاتجاهات",
                 ),
               ],
             ),
           ),
-
-          // 2. Secondary State Block
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(12),
@@ -191,8 +148,6 @@ class BranchCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // 3. Prominent Action Button
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton.icon(
@@ -216,7 +171,6 @@ class BranchCard extends StatelessWidget {
   }
 }
 
-// نافذة الإبلاغ (Dialog)
 void showReportDialog(BuildContext context, Branch branch,
     Function(String, LiquidityStatus) onSubmit) {
   showModalBottomSheet(
@@ -233,24 +187,21 @@ void showReportDialog(BuildContext context, Branch branch,
                   const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           _buildStatusButton(
-              ctx, "سيولة متوفرة", Colors.green, LiquidityStatus.available,
-              branch.id, onSubmit),
+              ctx, LiquidityStatus.available, branch.id, onSubmit),
           const SizedBox(height: 10),
           _buildStatusButton(
-              ctx, "مزدحم جداً", Colors.orange, LiquidityStatus.crowded,
-              branch.id, onSubmit),
+              ctx, LiquidityStatus.crowded, branch.id, onSubmit),
           const SizedBox(height: 10),
           _buildStatusButton(
-              ctx, "لا توجد سيولة", Colors.red, LiquidityStatus.empty,
-              branch.id, onSubmit),
+              ctx, LiquidityStatus.empty, branch.id, onSubmit),
         ],
       ),
     ),
   );
 }
 
-Widget _buildStatusButton(BuildContext context, String text, Color color,
-    LiquidityStatus status, String id, Function onSubmit) {
+Widget _buildStatusButton(BuildContext context, LiquidityStatus status, String id, Function onSubmit) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   return InkWell(
     onTap: () {
       onSubmit(id, status);
@@ -259,13 +210,13 @@ Widget _buildStatusButton(BuildContext context, String text, Color color,
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: color.withAlpha((255 * 0.1).round()),
-          border: Border.all(color: color),
+          color: status.backgroundColor(isDark),
+          border: Border.all(color: status.color(isDark)),
           borderRadius: BorderRadius.circular(12)),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.circle, color: color, size: 14),
+        Icon(Icons.circle, color: status.color(isDark), size: 14),
         const SizedBox(width: 10),
-        Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        Text(status.label, style: TextStyle(color: status.color(isDark), fontWeight: FontWeight.bold)),
       ]),
     ),
   );

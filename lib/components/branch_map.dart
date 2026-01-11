@@ -7,34 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:libyan_banking_hub/models/models.dart';
 import 'package:libyan_banking_hub/components/branch_widgets.dart';
 
-// --- Helpers ---
-
-Color getStatusColor(LiquidityStatus status) {
-  switch (status) {
-    case LiquidityStatus.available:
-      return const Color(0xFF22C55E); // Green 500
-    case LiquidityStatus.empty:
-      return const Color(0xFFEF4444); // Red 500
-    case LiquidityStatus.crowded:
-      return const Color(0xFFEAB308); // Yellow 500
-    default:
-      return const Color(0xFF9CA3AF); // Gray 400
-  }
-}
-
-String getStatusText(LiquidityStatus status) {
-  switch (status) {
-    case LiquidityStatus.available:
-      return "سيولة متوفرة";
-    case LiquidityStatus.crowded:
-      return "مزدحم";
-    case LiquidityStatus.empty:
-      return "فارغ";
-    default:
-      return "غير معروف";
-  }
-}
-
 // --- Mini Branch Map Widget ---
 
 class MiniBranchMap extends StatelessWidget {
@@ -44,12 +16,13 @@ class MiniBranchMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 128, // h-32
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[100],
+        color: isDark ? const Color(0xFF1F2937) : Colors.grey[100],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -63,7 +36,9 @@ class MiniBranchMap extends StatelessWidget {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: isDark
+                  ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.example.libyan_banking_hub',
             ),
             MarkerLayer(
@@ -74,7 +49,7 @@ class MiniBranchMap extends StatelessWidget {
                   height: 16,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: getStatusColor(branch.status),
+                      color: branch.status.color(isDark),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                       boxShadow: [
@@ -248,7 +223,6 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
               markers: [
                 // Branch Markers
                 ...widget.branches.map((branch) {
-                  final color = getStatusColor(branch.status);
                   final isSelected = _selectedBranch?.id == branch.id;
 
                   return Marker(
@@ -263,7 +237,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.blue : color,
+                          color: isSelected ? Colors.blue : branch.status.color(isDark),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: isSelected ? 4 : 3),
                           boxShadow: [
@@ -355,11 +329,11 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("مفتاح الحالة", style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.bold, fontSize: 12)),
+                const Text("مفتاح الحالة", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
                 const SizedBox(height: 8),
-                _buildLegendItem(LiquidityStatus.available),
-                _buildLegendItem(LiquidityStatus.crowded),
-                _buildLegendItem(LiquidityStatus.empty),
+                _buildLegendItem(LiquidityStatus.available, isDark),
+                _buildLegendItem(LiquidityStatus.crowded, isDark),
+                _buildLegendItem(LiquidityStatus.empty, isDark),
               ],
             ),
           ),
@@ -453,7 +427,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
                               ),
                             ],
                           ),
-                          _buildStatusBadge(_selectedBranch!.status),
+                          StatusBadge(status: _selectedBranch!.status),
                         ],
                       ),
                     ),
@@ -484,7 +458,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
                             icon: const Icon(Icons.info_outline, size: 16),
                             label: const Text("عرض التفاصيل"),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4CAF50),
+                              backgroundColor: const Color(0xFF10B981),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -523,7 +497,7 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildLegendItem(LiquidityStatus status) {
+  Widget _buildLegendItem(LiquidityStatus status, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -533,36 +507,13 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
             width: 10,
             height: 10,
             decoration: BoxDecoration(
-              color: getStatusColor(status),
+              color: status.color(isDark),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 1),
             ),
           ),
           const SizedBox(width: 8),
-          Text(getStatusText(status), style: const TextStyle(fontSize: 10)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(LiquidityStatus status) {
-    Color color = getStatusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Text(getStatusText(status), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-          const SizedBox(width: 6),
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          Text(status.label, style: const TextStyle(fontSize: 10)),
         ],
       ),
     );

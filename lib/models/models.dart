@@ -1,6 +1,6 @@
-// lib/models/models.dart
+import 'package:flutter/material.dart';
+import '../theme/colors.dart';
 
-// تحويل الـ Enum
 enum LiquidityStatus {
   available,
   crowded,
@@ -8,7 +8,43 @@ enum LiquidityStatus {
   unknown
 }
 
-// تحويل واجهة الفرع Branch
+extension LiquidityStatusX on LiquidityStatus {
+  String get label {
+    switch (this) {
+      case LiquidityStatus.available: return "سيولة متوفرة";
+      case LiquidityStatus.crowded: return "مزدحم";
+      case LiquidityStatus.empty: return "فارغ";
+      case LiquidityStatus.unknown: return "غير معروف";
+    }
+  }
+
+  Color color(bool isDark) {
+    switch (this) {
+      case LiquidityStatus.available:
+        return isDark ? AppColors.green300 : AppColors.green800;
+      case LiquidityStatus.crowded:
+        return isDark ? AppColors.yellow300 : AppColors.yellow800;
+      case LiquidityStatus.empty:
+        return isDark ? AppColors.red300 : AppColors.red800;
+      case LiquidityStatus.unknown:
+        return isDark ? AppColors.gray400 : AppColors.gray500;
+    }
+  }
+
+  Color backgroundColor(bool isDark) {
+    switch (this) {
+      case LiquidityStatus.available:
+        return isDark ? AppColors.green900.withAlpha(128) : AppColors.green100;
+      case LiquidityStatus.crowded:
+        return isDark ? AppColors.yellow900.withAlpha(128) : AppColors.yellow100;
+      case LiquidityStatus.empty:
+        return isDark ? AppColors.red900.withAlpha(128) : AppColors.red100;
+      case LiquidityStatus.unknown:
+        return isDark ? AppColors.gray700 : AppColors.gray100;
+    }
+  }
+}
+
 class Branch {
   final String id;
   final String bankId;
@@ -61,7 +97,6 @@ class Branch {
   }
 }
 
-// تحويل واجهة المصرف Bank
 class Bank {
   final String id;
   final String name;
