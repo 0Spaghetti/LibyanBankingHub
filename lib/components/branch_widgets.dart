@@ -1,8 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:libyan_banking_hub/models/models.dart';
+import 'package:libyan_banking_hub/theme/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart' as intl;
-import 'status_badge.dart';
+
+// --- Helpers ---
+
+String getStatusText(LiquidityStatus status) {
+  switch (status) {
+    case LiquidityStatus.available:
+      return "سيولة متوفرة";
+    case LiquidityStatus.crowded:
+      return "مزدحم";
+    case LiquidityStatus.empty:
+      return "فارغ";
+    default:
+      return "غير معروف";
+  }
+}
+
+class StatusBadge extends StatelessWidget {
+  final LiquidityStatus status;
+
+  const StatusBadge({super.key, required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    Color bgColor;
+    Color textColor;
+
+    switch (status) {
+      case LiquidityStatus.available:
+        bgColor = isDark ? AppColors.green900.withAlpha(128) : AppColors.green100;
+        textColor = isDark ? AppColors.green300 : AppColors.green800;
+        break;
+      case LiquidityStatus.crowded:
+        bgColor = isDark ? AppColors.yellow900.withAlpha(128) : AppColors.yellow100;
+        textColor = isDark ? AppColors.yellow300 : AppColors.yellow800;
+        break;
+      case LiquidityStatus.empty:
+        bgColor = isDark ? AppColors.red900.withAlpha(128) : AppColors.red100;
+        textColor = isDark ? AppColors.red300 : AppColors.red800;
+        break;
+      default:
+        bgColor = isDark ? AppColors.gray700 : AppColors.gray100;
+        textColor = isDark ? AppColors.gray200 : AppColors.gray800;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        getStatusText(status),
+        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
+      ),
+    );
+  }
+}
 
 // كارت الفرع المطور
 class BranchCard extends StatelessWidget {
@@ -28,10 +86,10 @@ class BranchCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: isDarkMode ? AppColors.gray800 : AppColors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
+            color: isDarkMode ? AppColors.gray700 : AppColors.gray100),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(isDarkMode ? 50 : 10),
@@ -105,8 +163,8 @@ class BranchCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? Colors.white.withAlpha(10)
-                  : Colors.grey[100],
+                  ? AppColors.white.withAlpha(10)
+                  : AppColors.gray50,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -143,7 +201,7 @@ class BranchCard extends StatelessWidget {
               label: const Text("إبلاغ عن الحالة",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.primary500,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(

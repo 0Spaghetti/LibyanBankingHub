@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'models/models.dart';
 import 'screens/misc_screens.dart';
 import 'components/branch_widgets.dart';
@@ -43,44 +44,61 @@ class _LibyanBankingAppState extends State<LibyanBankingApp> {
 
   @override
   Widget build(BuildContext context) {
+    const primaryEmerald = Color(0xFF10B981);
+    
     return MaterialApp(
       title: 'دليلي المصرفي',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF4CAF50),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        textTheme: GoogleFonts.tajawalTextTheme(ThemeData.light().textTheme),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryEmerald,
+          primary: primaryEmerald,
+          surface: Colors.white,
+          onSurface: const Color(0xFF111827),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
         appBarTheme: const AppBarTheme(
           surfaceTintColor: Colors.transparent,
           backgroundColor: Colors.transparent,
           centerTitle: true,
+          elevation: 0,
         ),
-        cardTheme: const CardThemeData(
+        cardTheme: CardThemeData(
           color: Colors.white,
-          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: Color(0xFFF3F4F6)),
+          ),
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF020617), // Deep Midnight
+        textTheme: GoogleFonts.tajawalTextTheme(ThemeData.dark().textTheme),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryEmerald,
+          brightness: Brightness.dark,
+          primary: primaryEmerald,
+          surface: const Color(0xFF1F2937), // Lighter navy component
+          onSurface: const Color(0xFFF9FAFB),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF111827), // blue-grey background
         appBarTheme: const AppBarTheme(
           surfaceTintColor: Colors.transparent,
-          backgroundColor: Color(0xFF020617),
+          backgroundColor: Colors.transparent,
           centerTitle: true,
+          elevation: 0,
         ),
-        cardTheme: const CardThemeData(
-          surfaceTintColor: Colors.transparent,
-          color: Color(0xFF0F172A), // Midnight Blue component
-        ),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4CAF50),
-          brightness: Brightness.dark,
-          surface: const Color(0xFF0F172A),
-          onSurface: const Color(0xFFF1F5F9),
-          primary: const Color(0xFF4CAF50),
-          secondary: const Color(0xFF22C55E),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF1F2937),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: Color(0xFF374151)),
+          ),
         ),
       ),
       locale: const Locale('ar'),
@@ -108,7 +126,6 @@ class _MainControllerState extends ConsumerState<MainController> {
   String _selectedCity = 'الكل';
   bool _showAvailableOnly = false;
   
-  // Search state
   bool _isSearching = false;
   Timer? _debounce;
   final TextEditingController _searchController = TextEditingController();
@@ -203,36 +220,36 @@ class _MainControllerState extends ConsumerState<MainController> {
       );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
         title: const Text(
           "دليلي المصرفي",
           style: TextStyle(
-            color: Color(0xFF4CAF50),
+            color: Color(0xFF10B981),
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? const Color(0xFF1E293B) // Slate blue
-                    : const Color(0xFFF1F5F9),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: Icon(Theme.of(context).brightness == Brightness.dark
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                widget.toggleTheme();
+              },
+              borderRadius: BorderRadius.circular(100),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF374151) : const Color(0xFFF4F4F5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(isDark
                     ? Icons.wb_sunny_outlined
                     : Icons.dark_mode_outlined, size: 20),
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  widget.toggleTheme();
-                },
               ),
             ),
           ),
@@ -262,35 +279,65 @@ class _MainControllerState extends ConsumerState<MainController> {
         child: _buildBody(),
       ),
       bottomNavigationBar: Container(
+        height: 90,
         decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1F2937).withOpacity(0.95) : Colors.white.withOpacity(0.95),
           boxShadow: [
-            BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, -5))
+            BoxShadow(color: Colors.black.withAlpha(isDark ? 40 : 10), blurRadius: 20, offset: const Offset(0, -5))
           ],
         ),
-        child: NavigationBar(
-          height: 80,
-          elevation: 0,
-          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-              ? const Color(0xFF0F172A) 
-              : Colors.white,
-          selectedIndex:
-              _view == 'MAP' ? 1 : _view == 'ADD' ? 2 : _view == 'EMERGENCY' ? 3 : _view == 'PROFILE' ? 4 : 0,
-          onDestinationSelected: (idx) {
-            HapticFeedback.selectionClick();
-            setState(() {
-              if (idx == 0) _view = 'HOME';
-              if (idx == 1) _view = 'MAP';
-              if (idx == 2) _view = 'ADD';
-              if (idx == 3) _view = 'EMERGENCY';
-              if (idx == 4) _view = 'PROFILE';
-            });
-          },
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: Colors.green), label: "الرئيسية"),
-            NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map, color: Colors.green), label: "الخريطة"),
-            NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle, color: Colors.green), label: "إضافة"),
-            NavigationDestination(icon: Icon(Icons.phone_outlined), selectedIcon: Icon(Icons.phone, color: Colors.green), label: "طوارئ"),
-            NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person, color: Colors.green), label: "حسابي"),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(0, Icons.home_rounded, "المصارف", _view == 'HOME' || _view == 'DETAILS'),
+            _buildNavItem(1, Icons.map_rounded, "الخريطة", _view == 'MAP'),
+            _buildNavItem(2, Icons.add_circle_rounded, "إضافة", _view == 'ADD'),
+            _buildNavItem(3, Icons.phone_rounded, "طوارئ", _view == 'EMERGENCY'),
+            _buildNavItem(4, Icons.person_rounded, "حسابي", _view == 'PROFILE'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int idx, IconData icon, String label, bool isSelected) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = const Color(0xFF10B981);
+    
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          if (idx == 0) _view = 'HOME';
+          if (idx == 1) _view = 'MAP';
+          if (idx == 2) _view = 'ADD';
+          if (idx == 3) _view = 'EMERGENCY';
+          if (idx == 4) _view = 'PROFILE';
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedScale(
+              duration: const Duration(milliseconds: 200),
+              scale: isSelected ? 1.2 : 1.0,
+              child: Icon(
+                icon,
+                color: isSelected ? primary : (isDark ? Colors.grey[600] : Colors.grey[400]),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? primary : (isDark ? Colors.grey[600] : Colors.grey[400]),
+              ),
+            ),
           ],
         ),
       ),
@@ -342,6 +389,7 @@ class _MainControllerState extends ConsumerState<MainController> {
       
       bool matchesSearch = _searchTerm.isEmpty || bank.name.contains(_searchTerm);
       if (!matchesSearch && _searchTerm.isNotEmpty) {
+        // Check if any of its branches matches the address or name
         matchesSearch = branches.any((branch) => 
           branch.bankId == bank.id && (branch.address.contains(_searchTerm) || branch.name.contains(_searchTerm))
         );
@@ -366,12 +414,12 @@ class _MainControllerState extends ConsumerState<MainController> {
       children: [
         // Tab Switcher
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: Container(
             height: 55,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9), 
-              borderRadius: BorderRadius.circular(12),
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFF4F4F5), 
+              borderRadius: BorderRadius.circular(100),
             ),
             child: Row(
               children: [
@@ -385,9 +433,9 @@ class _MainControllerState extends ConsumerState<MainController> {
                       margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: _homeTab == 'ALL' 
-                            ? (isDark ? const Color(0xFF020617) : Colors.white) 
+                            ? (isDark ? const Color(0xFF111827) : Colors.white) 
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(100),
                         boxShadow: _homeTab == 'ALL' ? [
                           BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4)
                         ] : [],
@@ -396,7 +444,7 @@ class _MainControllerState extends ConsumerState<MainController> {
                       child: Text(
                         "جميع المصارف",
                         style: TextStyle(
-                          color: _homeTab == 'ALL' ? (isDark ? Colors.white : Colors.black) : Colors.grey,
+                          color: _homeTab == 'ALL' ? (isDark ? Colors.white : Colors.black) : Colors.grey[500],
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -413,9 +461,9 @@ class _MainControllerState extends ConsumerState<MainController> {
                       margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: _homeTab == 'FAVORITES' 
-                            ? (isDark ? const Color(0xFF020617) : Colors.white) 
+                            ? (isDark ? const Color(0xFF111827) : Colors.white) 
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(100),
                         boxShadow: _homeTab == 'FAVORITES' ? [
                           BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4)
                         ] : [],
@@ -424,7 +472,7 @@ class _MainControllerState extends ConsumerState<MainController> {
                       child: Text(
                         "المفضلة",
                         style: TextStyle(
-                          color: _homeTab == 'FAVORITES' ? (isDark ? Colors.white : Colors.black) : Colors.grey,
+                          color: _homeTab == 'FAVORITES' ? (isDark ? Colors.white : Colors.black) : Colors.grey[500],
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -436,7 +484,7 @@ class _MainControllerState extends ConsumerState<MainController> {
           ),
         ),
 
-        // Search Bar & Filter Row
+        // Search Row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
@@ -446,45 +494,49 @@ class _MainControllerState extends ConsumerState<MainController> {
                 width: 55,
                 height: 55,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0), width: 1),
+                  color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE4E4E7)),
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.tune, color: isDark ? Colors.white70 : Colors.black54),
-                  onPressed: () {
-                    _showFilterOptions(context);
-                  },
+                  icon: Icon(Icons.tune_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                  onPressed: () => _showFilterOptions(context),
                 ),
               ),
               const SizedBox(width: 12),
-              // Search Input
+              // Search Field
               Expanded(
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   height: 55,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0), width: 1),
+                    color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isSearchFocused 
+                        ? const Color(0xFF10B981) 
+                        : (isDark ? const Color(0xFF374151) : const Color(0xFFE4E4E7)),
+                      width: _isSearchFocused ? 2 : 1,
+                    ),
                   ),
                   child: TextField(
                     controller: _searchController,
+                    focusNode: _searchFocusNode,
                     onChanged: _onSearchChanged,
                     textAlign: TextAlign.start,
                     decoration: InputDecoration(
                       hintText: "ابحث عن مصرف أو مدينة...",
                       hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
                       suffixIcon: _isSearching 
                         ? const Padding(
                             padding: EdgeInsets.all(12.0),
                             child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                           )
                         : (_searchController.text.isNotEmpty 
-                            ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: _clearSearch) 
-                            : null),
+                            ? IconButton(icon: const Icon(Icons.clear_rounded, size: 18), onPressed: _clearSearch) 
+                            : const Icon(Icons.search_rounded, color: Colors.grey)),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
                     ),
                   ),
                 ),
@@ -499,7 +551,7 @@ class _MainControllerState extends ConsumerState<MainController> {
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.8),
             itemCount: filteredBanks.length,
             itemBuilder: (ctx, idx) {
               final bank = filteredBanks[idx];
@@ -509,43 +561,57 @@ class _MainControllerState extends ConsumerState<MainController> {
                 transitionType: ContainerTransitionType.fade,
                 openBuilder: (context, _) => BankDetailsScreen(bank: bank),
                 closedElevation: 0,
-                closedShape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                closedColor: Theme.of(context).cardColor,
+                closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                closedColor: isDark ? const Color(0xFF1F2937) : Colors.white,
                 closedBuilder: (context, openContainer) => GestureDetector(
-                  onTap: () {
-                    HapticFeedback.mediumImpact();
-                    openContainer();
-                  },
+                  onTap: openContainer,
                   child: Card(
                     margin: EdgeInsets.zero,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Stack(
                       children: [
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: IconButton(
-                            icon: Icon(
-                                isFav ? Icons.favorite : Icons.favorite_border,
-                                color: isFav ? Colors.red : null),
-                            onPressed: () {
-                              HapticFeedback.lightImpact();
-                              ref
-                                  .read(favoritesProvider.notifier)
-                                  .toggleFavorite(bank.id);
-                            },
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: InkWell(
+                            onTap: () => ref.read(favoritesProvider.notifier).toggleFavorite(bank.id),
+                            borderRadius: BorderRadius.circular(100),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(color: Colors.black.withAlpha(10), shape: BoxShape.circle),
+                              child: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isFav ? Colors.red : (isDark ? Colors.white70 : Colors.black26), size: 18),
+                            ),
                           ),
                         ),
-                        CircleAvatar(
-                            radius: 30,
-                            backgroundImage: NetworkImage(bank.logoUrl)),
-                        const SizedBox(height: 10),
-                        Text(bank.name,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(bank.city,
-                            style:
-                                const TextStyle(fontSize: 12, color: Colors.grey)),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFF4F4F5), width: 2)
+                                ),
+                                child: CircleAvatar(
+                                  radius: 35,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: NetworkImage(bank.logoUrl),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(bank.name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.black.withAlpha(40) : const Color(0xFFF4F4F5), 
+                                  borderRadius: BorderRadius.circular(100)
+                                ),
+                                child: Text(bank.city, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -561,25 +627,23 @@ class _MainControllerState extends ConsumerState<MainController> {
   void _showFilterOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("خيارات التصفية", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            const Text("خيارات التصفية", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
             DropdownButtonFormField<String>(
               initialValue: _selectedCity,
               decoration: InputDecoration(
                 labelText: "المدينة",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              items: _cities
-                  .map((city) => DropdownMenuItem(
-                      value: city,
-                      child: Text(city)))
-                  .toList(),
+              items: _cities.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
               onChanged: (v) {
                 setState(() => _selectedCity = v!);
                 Navigator.pop(ctx);
@@ -588,6 +652,7 @@ class _MainControllerState extends ConsumerState<MainController> {
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text("السيولة المتوفرة فقط"),
+              activeColor: const Color(0xFF10B981),
               value: _showAvailableOnly,
               onChanged: (v) {
                 setState(() => _showAvailableOnly = v);
@@ -600,15 +665,106 @@ class _MainControllerState extends ConsumerState<MainController> {
     );
   }
 
+  void _showToast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg, textAlign: TextAlign.center), 
+          backgroundColor: const Color(0xFF059669),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 110, left: 24, right: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ));
+  }
+
+  Widget _buildEmergencyContacts() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _emergencyContacts.length,
+      itemBuilder: (context, index) {
+        final contact = _emergencyContacts[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF10B981)),
+            title: Text(contact['name']!, textAlign: TextAlign.start, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(contact['number']!, textAlign: TextAlign.start),
+            trailing: Container(
+              decoration: BoxDecoration(color: const Color(0xFF10B981).withAlpha(20), shape: BoxShape.circle),
+              child: IconButton(
+                icon: const Icon(Icons.call_rounded, color: Color(0xFF10B981)),
+                onPressed: () async {
+                  final Uri launchUri = Uri(scheme: 'tel', path: contact['number']);
+                  await launchUrl(launchUri);
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfile() {
+    final reportCount = ref.watch(reportCountProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Center(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF10B981), width: 2)),
+                child: CircleAvatar(radius: 50, backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.grey[200], child: const Icon(Icons.person_rounded, size: 50, color: Colors.grey)),
+              ),
+              const SizedBox(height: 16),
+              const Text("المستخدم التجريبي", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Text("user@example.com", style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 40),
+        _buildProfileItem(Icons.analytics_rounded, "عدد البلاغات", reportCount.toString(), isDark),
+        _buildProfileItem(Icons.settings_rounded, "إعدادات الحساب", null, isDark),
+        _buildProfileItem(Icons.info_rounded, "حول التطبيق", "v1.0.0", isDark),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: () => setState(() => _view = 'AUTH'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.withAlpha(20), 
+            foregroundColor: Colors.red,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.red, width: 0.5)),
+            minimumSize: const Size(double.infinity, 55),
+          ),
+          child: const Text("تسجيل الخروج", style: TextStyle(fontWeight: FontWeight.bold)),
+        )
+      ],
+    );
+  }
+
+  Widget _buildProfileItem(IconData icon, String title, String? trailing, bool isDark) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF10B981)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+        trailing: trailing != null ? Text(trailing, style: const TextStyle(fontWeight: FontWeight.bold)) : const Icon(Icons.chevron_left_rounded),
+      ),
+    );
+  }
+
   Widget _buildCurrencyWidget() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        color: isDarkMode ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+        border: Border.all(color: isDarkMode ? const Color(0xFF374151) : const Color(0xFFE4E4E7)),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -620,101 +776,9 @@ class _MainControllerState extends ConsumerState<MainController> {
       ),
     );
   }
-
-  Widget _buildEmergencyContacts() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _emergencyContacts.length,
-      itemBuilder: (context, index) {
-        final contact = _emergencyContacts[index];
-        return Card(
-          child: ListTile(
-            leading: const Icon(Icons.phone, color: Colors.green),
-            title: Text(contact['name']!, textAlign: TextAlign.start),
-            subtitle: Text(contact['number']!, textAlign: TextAlign.start),
-            trailing: IconButton(
-              icon: const Icon(Icons.call, color: Colors.blue),
-              onPressed: () async {
-                HapticFeedback.lightImpact();
-                final Uri launchUri =
-                    Uri(scheme: 'tel', path: contact['number']);
-                await launchUrl(launchUri);
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildProfile() {
-    final reportCount = ref.watch(reportCountProvider);
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Center(
-          child: Column(
-            children: [
-              CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-              SizedBox(height: 10),
-              Text("المستخدم التجريبي", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text("user@example.com", style: TextStyle(color: Colors.grey)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 30),
-        ListTile(
-          leading: const Icon(Icons.analytics_outlined),
-          title: const Text("عدد البلاغات"),
-          trailing: Text(reportCount.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.settings),
-          title: const Text("إعدادات الحساب"),
-          onTap: () { HapticFeedback.lightImpact(); },
-        ),
-        ListTile(
-          leading: const Icon(Icons.notifications),
-          title: const Text("التنبيهات"),
-          onTap: () { HapticFeedback.lightImpact(); },
-        ),
-        ListTile(
-          leading: const Icon(Icons.info_outline),
-          title: const Text("حول التطبيق"),
-          trailing: const Text("v1.0.0"),
-          onTap: () { HapticFeedback.lightImpact(); },
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            HapticFeedback.heavyImpact();
-            setState(() => _view = 'AUTH');
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.withAlpha(20), 
-            foregroundColor: Colors.red,
-            side: const BorderSide(color: Colors.red),
-          ),
-          child: const Text("تسجيل الخروج"),
-        )
-      ],
-    );
-  }
-
-  void _showToast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg, textAlign: TextAlign.center), 
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(bottom: 100, left: 24, right: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ));
-  }
 }
 
-// Separate Screen Widget for better performance during OpenContainer transition
+// Separate Screen Widget
 class BankDetailsScreen extends ConsumerWidget {
   final Bank bank;
   const BankDetailsScreen({super.key, required this.bank});
@@ -727,76 +791,61 @@ class BankDetailsScreen extends ConsumerWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: Text(bank.name)),
+      appBar: AppBar(title: Text(bank.name, style: const TextStyle(fontWeight: FontWeight.bold))),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         children: [
-          const Text("توجه السيولة (آخر 7 أيام)", 
-              textAlign: TextAlign.start,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 10),
+          const Text("توجه السيولة (آخر 7 أيام)", textAlign: TextAlign.start, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 16),
           const LiquidityChart(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+              color: isDarkMode ? const Color(0xFF1F2937) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: isDarkMode ? const Color(0xFF374151) : const Color(0xFFE4E4E7)),
+              boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDarkMode ? 0 : 5), blurRadius: 10)]
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Row(children: [
-                  Icon(Icons.auto_awesome, color: Colors.orange),
+                  Icon(Icons.auto_awesome_rounded, color: Colors.orange, size: 20),
                   SizedBox(width: 8),
-                  Text("تحليل الذكاء الاصطناعي",
-                      style: TextStyle(fontWeight: FontWeight.bold))
+                  Text("تحليل الذكاء الاصطناعي", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))
                 ]),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 aiAnalysis.when(
-                  data: (text) => Text(text ??
-                      "اضغط للتحليل للحصول على ملخص ذكي لحالة السيولة.",
-                      textAlign: TextAlign.start),
+                  data: (text) => Text(text ?? "اضغط للتحليل للحصول على ملخص ذكي لحالة السيولة.", textAlign: TextAlign.start, style: const TextStyle(height: 1.5)),
                   loading: () => const ShimmerLoading(),
                   error: (err, stack) => const Text("حدث خطأ في التحليل", textAlign: TextAlign.start),
                 ),
                 if (!aiAnalysis.isLoading && aiAnalysis.value == null)
-                  TextButton(
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      ref.read(aiAnalysisProvider.notifier).runAnalysis();
-                    },
-                    child: const Text("تحليل السيولة الآن"),
-                  )
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: ElevatedButton(
+                      onPressed: () => ref.read(aiAnalysisProvider.notifier).runAnalysis(), 
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 45),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text("تحليل السيولة الآن", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          const Text("الفروع",
-              textAlign: TextAlign.start,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 32),
+          const Text("الفروع", textAlign: TextAlign.start, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
           ...bankBranches.map((branch) => BranchCard(
                 branch: branch,
                 onReport: (b) => showReportDialog(context, b, (id, status) {
-                  HapticFeedback.mediumImpact();
-                  ref
-                      .read(branchesProvider.notifier)
-                      .updateBranchStatus(id, status);
+                  ref.read(branchesProvider.notifier).updateBranchStatus(id, status);
                   ref.read(reportCountProvider.notifier).increment();
-                  
-                  // Visual confirmation Toast
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text("شكراً لمساهمتك! تم تحديث حالة السيولة.", textAlign: TextAlign.center),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      margin: const EdgeInsets.only(bottom: 100, left: 24, right: 24),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
                 }),
               ))
         ],
@@ -809,26 +858,19 @@ class CurrencyItem extends StatelessWidget {
   final String label;
   final String buy;
   final String sell;
-  const CurrencyItem(
-      {super.key, required this.label, required this.buy, required this.sell});
+  const CurrencyItem({super.key, required this.label, required this.buy, required this.sell});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Text("شراء: $buy",
-                style: const TextStyle(fontSize: 11, color: Colors.green)),
-            const SizedBox(width: 8),
-            Text("بيع: $sell",
-                style: const TextStyle(fontSize: 11, color: Colors.red)),
-          ],
-        )
+        Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Row(children: [
+          Text("شراء: $buy", style: const TextStyle(fontSize: 11, color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+          const SizedBox(width: 8),
+          Text("بيع: $sell", style: const TextStyle(fontSize: 11, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+        ])
       ],
     );
   }
@@ -841,14 +883,14 @@ class ShimmerLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF1E293B) : Colors.grey[300]!,
-      highlightColor: isDark ? const Color(0xFF0F172A) : Colors.grey[100]!,
+      baseColor: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+      highlightColor: isDark ? const Color(0xFF1F2937) : Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 12, width: double.infinity, color: Colors.white),
+          Container(height: 12, width: double.infinity, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
           const SizedBox(height: 8),
-          Container(height: 12, width: 200, color: Colors.white),
+          Container(height: 12, width: 200, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
         ],
       ),
     );

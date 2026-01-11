@@ -13,11 +13,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_map: ^6.0.0
-  latlong2: ^0.9.0
-  google_generative_ai: ^0.2.0
-  url_launcher: ^6.1.11
-  intl: ^0.18.0
+  flutter_map: ^6.0.0       # بديل Leaflet للخرائط
+  latlong2: ^0.9.0          # للتعامل مع الإحداثيات
+  google_generative_ai: ^0.2.0 # لخدمة Gemini
+  url_launcher: ^6.1.11     # لفتح الروابط (مثل خرائط جوجل)
+  intl: ^0.18.0             # لتنسيق التواريخ
   cupertino_icons: ^1.0.8
   shimmer: ^3.0.0
   animations: ^2.0.11
@@ -25,6 +25,7 @@ dependencies:
   fl_chart: ^0.66.0
   geolocator: ^11.0.0
   shared_preferences: ^2.2.2
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
