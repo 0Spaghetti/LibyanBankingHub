@@ -25,10 +25,10 @@ class NavigationHub extends ConsumerStatefulWidget {
 }
 
 class _NavigationHubState extends ConsumerState<NavigationHub> {
-  String _view = 'SPLASH'; // SPLASH, ONBOARDING, AUTH, HOME, MAP, ADD, EMERGENCY, PROFILE
+  String _view = 'SPLASH'; 
 
   String _searchTerm = '';
-  String _homeTab = 'ALL'; // ALL, FAVORITES
+  String _homeTab = 'ALL'; 
   String _selectedCity = 'الكل';
   bool _showAvailableOnly = false;
   
@@ -105,7 +105,11 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
     return Scaffold(
       appBar: AppBar(
         title: Text("دليلي المصرفي",
-          style: TextStyle(color: isDark ? AppColors.primary400 : AppColors.primary800, fontWeight: FontWeight.bold, fontSize: 22)),
+          style: TextStyle(
+            color: isDark ? AppColors.primary400 : AppColors.primary800, 
+            fontWeight: FontWeight.bold, 
+            fontSize: 22
+          )),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -118,10 +122,15 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.gray700 : AppColors.gray100,
+                  color: isDark ? AppColors.gray700 : AppColors.white,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 10), blurRadius: 4)
+                  ]
                 ),
-                child: Icon(isDark ? Icons.wb_sunny_outlined : Icons.dark_mode_outlined, size: 20),
+                child: Icon(isDark ? Icons.wb_sunny_outlined : Icons.dark_mode_outlined, 
+                  size: 20, 
+                  color: isDark ? Colors.white : AppColors.gray900),
               ),
             ),
           ),
@@ -144,8 +153,12 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
       bottomNavigationBar: Container(
         height: 90,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.gray800.withAlpha((255 * 0.95).round()) : AppColors.white.withAlpha((255 * 0.95).round()),
-          boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 40 : 10), blurRadius: 20, offset: const Offset(0, -5))],
+          color: isDark 
+              ? AppColors.gray800.withAlpha((255 * 0.95).round()) 
+              : AppColors.white.withAlpha((255 * 0.95).round()),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withAlpha(isDark ? 40 : 10), blurRadius: 20, offset: const Offset(0, -5))
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -164,6 +177,7 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
   Widget _buildNavItem(int idx, IconData icon, String label, bool isSelected) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = AppColors.primary500;
+    
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -187,7 +201,11 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
               child: Icon(icon, color: isSelected ? primary : (isDark ? AppColors.gray400 : AppColors.gray500)),
             ),
             const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? primary : (isDark ? AppColors.gray400 : AppColors.gray500))),
+            Text(label, style: TextStyle(
+              fontSize: 10, 
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, 
+              color: isSelected ? primary : (isDark ? AppColors.gray400 : AppColors.gray500)
+            )),
           ],
         ),
       ),
@@ -229,11 +247,15 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
 
     return Column(
       children: [
+        // Tab Switcher
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: Container(
             height: 55,
-            decoration: BoxDecoration(color: isDark ? AppColors.gray700 : AppColors.gray100, borderRadius: BorderRadius.circular(100)),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.gray700 : AppColors.gray100, 
+              borderRadius: BorderRadius.circular(100)
+            ),
             child: Row(
               children: [
                 _buildTab('ALL', 'جميع المصارف', isDark),
@@ -242,34 +264,70 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
             ),
           ),
         ),
+
+        // Search Row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               Container(
                 width: 55, height: 55,
-                decoration: BoxDecoration(color: isDark ? AppColors.gray800 : AppColors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? AppColors.gray700 : AppColors.gray200)),
-                child: IconButton(icon: Icon(Icons.tune_rounded, color: isDark ? AppColors.white.withAlpha(180) : Colors.black54), onPressed: () => _showFilterOptions(context)),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.gray800 : AppColors.white, 
+                  borderRadius: BorderRadius.circular(16), 
+                  border: Border.all(color: isDark ? AppColors.gray700 : AppColors.gray200)
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.tune_rounded, color: isDark ? Colors.white70 : AppColors.gray500), 
+                  onPressed: () => _showFilterOptions(context)
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200), height: 55,
-                  decoration: BoxDecoration(color: isDark ? AppColors.gray800 : AppColors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: _isSearchFocused ? AppColors.primary500 : (isDark ? AppColors.gray700 : AppColors.gray200), width: _isSearchFocused ? 2 : 1)),
+                  duration: const Duration(milliseconds: 200),
+                  height: 55,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.gray800 : AppColors.white, 
+                    borderRadius: BorderRadius.circular(16), 
+                    border: Border.all(
+                      color: _isSearchFocused ? AppColors.primary500 : (isDark ? AppColors.gray700 : AppColors.gray200), 
+                      width: _isSearchFocused ? 2 : 1
+                    )
+                  ),
                   child: TextField(
-                    controller: _searchController, focusNode: _searchFocusNode, onChanged: _onSearchChanged, textAlign: TextAlign.start,
-                    decoration: InputDecoration(hintText: "ابحث عن مصرف أو مدينة...", hintStyle: const TextStyle(color: Colors.grey, fontSize: 14), suffixIcon: _isSearching ? const Padding(padding: EdgeInsets.all(12.0), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))) : (_searchController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear_rounded, size: 18), onPressed: _clearSearch) : const Icon(Icons.search_rounded, color: Colors.grey)), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15)),
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: _onSearchChanged,
+                    textAlign: TextAlign.start,
+                    style: TextStyle(color: isDark ? AppColors.white : AppColors.gray900),
+                    decoration: InputDecoration(
+                      hintText: "ابحث عن مصرف أو مدينة...", 
+                      hintStyle: const TextStyle(color: Colors.grey, fontSize: 14), 
+                      prefixIcon: Icon(Icons.search_rounded, color: AppColors.gray500),
+                      suffixIcon: _isSearching 
+                        ? const Padding(padding: EdgeInsets.all(12.0), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))) 
+                        : (_searchController.text.isNotEmpty 
+                            ? IconButton(icon: const Icon(Icons.clear_rounded, size: 18), onPressed: _clearSearch) 
+                            : null), 
+                      border: InputBorder.none, 
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15)
+                    ),
                   ),
                 ),
               ),
             ],
           ),
         ),
+
         _buildCurrencyWidget(),
+
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.8
+            ),
             itemCount: filteredBanks.length,
             itemBuilder: (ctx, idx) {
               final bank = filteredBanks[idx];
@@ -277,7 +335,8 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
               return OpenContainer(
                 transitionType: ContainerTransitionType.fade,
                 openBuilder: (context, _) => BankDetailsScreen(bank: bank),
-                closedElevation: 0, closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                closedElevation: 0, 
+                closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 closedColor: isDark ? AppColors.gray800 : AppColors.white,
                 closedBuilder: (context, openContainer) => GestureDetector(
                   onTap: openContainer,
@@ -285,8 +344,38 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
                     margin: EdgeInsets.zero,
                     child: Stack(
                       children: [
-                        Positioned(top: 8, left: 8, child: InkWell(onTap: () => ref.read(favoritesProvider.notifier).toggleFavorite(bank.id), borderRadius: BorderRadius.circular(100), child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.black.withAlpha(10), shape: BoxShape.circle), child: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isFav ? Colors.red : (isDark ? Colors.white70 : Colors.black26), size: 18)))),
-                        Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isDark ? AppColors.gray700 : AppColors.gray100, width: 2)), child: CircleAvatar(radius: 35, backgroundColor: AppColors.white, backgroundImage: NetworkImage(bank.logoUrl))), const SizedBox(height: 16), Text(bank.name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)), const SizedBox(height: 8), Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: isDark ? Colors.black.withAlpha(40) : AppColors.gray100, borderRadius: BorderRadius.circular(100)), child: Text(bank.city, style: const TextStyle(fontSize: 11, color: Colors.grey)))])),
+                        Positioned(
+                          top: 8, left: 8, 
+                          child: InkWell(
+                            onTap: () => ref.read(favoritesProvider.notifier).toggleFavorite(bank.id), 
+                            borderRadius: BorderRadius.circular(100), 
+                            child: Container(
+                              padding: const EdgeInsets.all(6), 
+                              decoration: BoxDecoration(color: Colors.black.withAlpha(10), shape: BoxShape.circle), 
+                              child: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isFav ? Colors.red : (isDark ? Colors.white70 : AppColors.gray400), size: 18)
+                            )
+                          )
+                        ),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center, 
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4), 
+                                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isDark ? AppColors.gray700 : AppColors.gray100, width: 2)), 
+                                child: CircleAvatar(radius: 35, backgroundColor: AppColors.white, backgroundImage: NetworkImage(bank.logoUrl))
+                              ), 
+                              const SizedBox(height: 16), 
+                              Text(bank.name, textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? AppColors.white : AppColors.gray900)), 
+                              const SizedBox(height: 8), 
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), 
+                                decoration: BoxDecoration(color: isDark ? Colors.black.withAlpha(40) : AppColors.gray100, borderRadius: BorderRadius.circular(100)), 
+                                child: Text(bank.city, style: const TextStyle(fontSize: 11, color: Colors.grey))
+                              )
+                            ]
+                          )
+                        ),
                       ],
                     ),
                   ),
@@ -309,9 +398,16 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
         },
         child: Container(
           margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(color: isActive ? (isDark ? AppColors.gray800 : AppColors.white) : Colors.transparent, borderRadius: BorderRadius.circular(100), boxShadow: isActive ? [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4)] : []),
+          decoration: BoxDecoration(
+            color: isActive ? (isDark ? AppColors.gray800 : AppColors.white) : Colors.transparent, 
+            borderRadius: BorderRadius.circular(100), 
+            boxShadow: isActive ? [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4)] : []
+          ),
           alignment: Alignment.center,
-          child: Text(label, style: TextStyle(color: isActive ? (isDark ? AppColors.white : Colors.black) : AppColors.gray500, fontWeight: FontWeight.bold)),
+          child: Text(label, style: TextStyle(
+            color: isActive ? (isDark ? AppColors.white : AppColors.gray900) : AppColors.gray500, 
+            fontWeight: FontWeight.bold
+          )),
         ),
       ),
     );
@@ -322,14 +418,27 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: isDarkMode ? AppColors.gray800 : AppColors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: isDarkMode ? AppColors.gray700 : AppColors.gray200)),
-      child: const Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [CurrencyItem(label: "الدولار (رسمي)", buy: "4.82", sell: "4.84"), VerticalDivider(), CurrencyItem(label: "الدولار (موازي)", buy: "7.15", sell: "7.18")]),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppColors.gray800 : AppColors.white, 
+        borderRadius: BorderRadius.circular(12), 
+        border: Border.all(color: isDarkMode ? AppColors.gray700 : AppColors.gray200)
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround, 
+        children: [
+          CurrencyItem(label: "الدولار (رسمي)", buy: "4.82", sell: "4.84"), 
+          VerticalDivider(), 
+          CurrencyItem(label: "الدولار (موازي)", buy: "7.15", sell: "7.18")
+        ]
+      ),
     );
   }
 
   void _showFilterOptions(BuildContext context) {
     showModalBottomSheet(
-      context: context, backgroundColor: Theme.of(context).scaffoldBackgroundColor, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      context: context, 
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -343,7 +452,12 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
               onChanged: (v) { setState(() => _selectedCity = v!); Navigator.pop(ctx); },
             ),
             const SizedBox(height: 16),
-            SwitchListTile(title: const Text("السيولة المتوفرة فقط"), activeColor: AppColors.primary500, value: _showAvailableOnly, onChanged: (v) { setState(() => _showAvailableOnly = v); Navigator.pop(ctx); }),
+            SwitchListTile(
+              title: const Text("السيولة المتوفرة فقط"), 
+              activeColor: AppColors.primary500, 
+              value: _showAvailableOnly, 
+              onChanged: (v) { setState(() => _showAvailableOnly = v); Navigator.pop(ctx); }
+            ),
           ],
         ),
       ),
@@ -352,15 +466,41 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
 
   Widget _buildEmergencyContacts() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16), itemCount: _emergencyContacts.length,
+      padding: const EdgeInsets.all(16), 
+      itemCount: _emergencyContacts.length,
       itemBuilder: (context, index) {
         final contact = _emergencyContacts[index];
-        return Card(margin: const EdgeInsets.only(bottom: 12), child: ListTile(leading: const Icon(Icons.phone_in_talk_rounded, color: AppColors.primary500), title: Text(contact['name']!, textAlign: TextAlign.start, style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text(contact['number']!, textAlign: TextAlign.start), trailing: Container(decoration: BoxDecoration(color: AppColors.primary500.withAlpha(20), shape: BoxShape.circle), child: IconButton(icon: const Icon(Icons.call_rounded, color: AppColors.primary500), onPressed: () async { final Uri launchUri = Uri(scheme: 'tel', path: contact['number']); await launchUrl(launchUri); }))));
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12), 
+          child: ListTile(
+            leading: const Icon(Icons.phone_in_talk_rounded, color: AppColors.primary500), 
+            title: Text(contact['name']!, textAlign: TextAlign.start, style: const TextStyle(fontWeight: FontWeight.bold)), 
+            subtitle: Text(contact['number']!, textAlign: TextAlign.start), 
+            trailing: Container(
+              decoration: BoxDecoration(color: AppColors.primary500.withAlpha(20), shape: BoxShape.circle), 
+              child: IconButton(
+                icon: const Icon(Icons.call_rounded, color: AppColors.primary500), 
+                onPressed: () async { 
+                  final Uri launchUri = Uri(scheme: 'tel', path: contact['number']); 
+                  await launchUrl(launchUri); 
+                }
+              )
+            )
+          )
+        );
       },
     );
   }
 
   void _showToast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, textAlign: TextAlign.center), backgroundColor: AppColors.primary600, behavior: SnackBarBehavior.floating, margin: const EdgeInsets.only(bottom: 110, left: 24, right: 24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center), 
+        backgroundColor: AppColors.primary600, 
+        behavior: SnackBarBehavior.floating, 
+        margin: const EdgeInsets.only(bottom: 110, left: 24, right: 24), 
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+      )
+    );
   }
 }

@@ -10,6 +10,11 @@ class AuthScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    final textColor = isDark ? AppColors.white : AppColors.gray900;
+    final subTextColor = isDark ? AppColors.gray400 : AppColors.gray500;
+    final inputBg = isDark ? AppColors.gray800 : AppColors.white;
+    final inputBorder = isDark ? AppColors.gray700 : AppColors.gray200;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.gray900 : AppColors.gray50,
       body: Center(
@@ -25,26 +30,26 @@ class AuthScreen extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withAlpha(30),
+                    color: AppColors.primary500.withAlpha(30),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.account_balance_rounded,
                     size: 40,
-                    color: Color(0xFF10B981),
+                    color: AppColors.primary500,
                   ),
                 ),
               ),
               const SizedBox(height: 24),
               
               // 2. Title & Subtitle
-              const Text(
+              Text(
                 "تسجيل الدخول",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: textColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -53,27 +58,33 @@ class AuthScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.gray400,
+                  color: subTextColor,
                 ),
               ),
               const SizedBox(height: 48),
 
               // 3. Email Field
-              _buildLabel("البريد الإلكتروني"),
+              _buildLabel("البريد الإلكتروني", textColor),
               _buildTextField(
                 hint: "user@example.com",
                 icon: Icons.email_outlined,
                 isDark: isDark,
+                bgColor: inputBg,
+                borderColor: inputBorder,
+                textColor: textColor,
               ),
               const SizedBox(height: 24),
 
               // 4. Password Field
-              _buildLabel("كلمة المرور"),
+              _buildLabel("كلمة المرور", textColor),
               _buildTextField(
                 hint: "********",
                 icon: Icons.lock_outline,
                 isDark: isDark,
                 isPassword: true,
+                bgColor: inputBg,
+                borderColor: inputBorder,
+                textColor: textColor,
               ),
               const SizedBox(height: 32),
 
@@ -83,7 +94,7 @@ class AuthScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF10B981).withAlpha(60),
+                      color: AppColors.primary500.withAlpha(isDark ? 60 : 40),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -95,7 +106,7 @@ class AuthScreen extends StatelessWidget {
                     onLogin();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: AppColors.primary500,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(
@@ -117,7 +128,7 @@ class AuthScreen extends StatelessWidget {
               // 6. Divider
               Row(
                 children: [
-                  Expanded(child: Divider(color: AppColors.gray700)),
+                  Expanded(child: Divider(color: inputBorder)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
@@ -125,7 +136,7 @@ class AuthScreen extends StatelessWidget {
                       style: TextStyle(color: AppColors.gray500, fontSize: 14),
                     ),
                   ),
-                  Expanded(child: Divider(color: AppColors.gray700)),
+                  Expanded(child: Divider(color: inputBorder)),
                 ],
               ),
               const SizedBox(height: 32),
@@ -137,12 +148,12 @@ class AuthScreen extends StatelessWidget {
                   onLogin();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gray800,
-                  foregroundColor: Colors.white,
+                  backgroundColor: isDark ? AppColors.gray800 : AppColors.white,
+                  foregroundColor: textColor,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppColors.gray700),
+                    side: BorderSide(color: inputBorder),
                   ),
                   elevation: 0,
                 ),
@@ -161,16 +172,16 @@ class AuthScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String text, Color color) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, right: 4),
       child: Text(
         text,
         textAlign: TextAlign.start,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: color,
         ),
       ),
     );
@@ -180,21 +191,24 @@ class AuthScreen extends StatelessWidget {
     required String hint,
     required IconData icon,
     required bool isDark,
+    required Color bgColor,
+    required Color borderColor,
+    required Color textColor,
     bool isPassword = false,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.gray800,
+        color: bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gray700),
+        border: Border.all(color: borderColor),
       ),
       child: TextField(
         obscureText: isPassword,
         textAlign: TextAlign.start,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: textColor),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(color: AppColors.gray500),
+          hintStyle: const TextStyle(color: AppColors.gray500),
           prefixIcon: Icon(icon, color: AppColors.gray500, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
