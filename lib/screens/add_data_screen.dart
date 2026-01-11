@@ -96,9 +96,14 @@ class _AddDataScreenState extends State<AddDataScreen> with SingleTickerProvider
 
       widget.onAddBank(newBank);
 
-      // Reset
+      // UX Improvement: Auto-select this bank for the next step (Branch)
+      setState(() {
+        _selectedBankId = newBank.id;
+        _activeTab = 'BRANCH';
+      });
+
       _bankNameController.clear();
-      // _bankCityController keeps "طرابلس" as default
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إضافة المصرف بنجاح. يمكنك الآن إضافة فرع له.')));
     }
   }
 
@@ -119,10 +124,9 @@ class _AddDataScreenState extends State<AddDataScreen> with SingleTickerProvider
 
       widget.onAddBranch(newBranch);
 
-      // Reset
-      _branchNameController.clear();
-      _branchAddressController.clear();
-      setState(() => _isAtm = false);
+      // UX Improvement: Close screen after successful branch addition
+      widget.onCancel(); 
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إضافة الفرع بنجاح')));
     }
   }
 
