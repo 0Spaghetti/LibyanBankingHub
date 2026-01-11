@@ -3,29 +3,144 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:libyan_banking_hub/models/models.dart';
 import 'package:libyan_banking_hub/components/branch_widgets.dart';
 
+// --- Helpers ---
+
+Color getStatusColor(LiquidityStatus status) {
+  switch (status) {
+    case LiquidityStatus.available:
+      return const Color(0xFF22C55E); // Green 500
+    case LiquidityStatus.empty:
+      return const Color(0xFFEF4444); // Red 500
+    case LiquidityStatus.crowded:
+      return const Color(0xFFEAB308); // Yellow 500
+    default:
+      return const Color(0xFF9CA3AF); // Gray 400
+  }
+}
+
+String getStatusText(LiquidityStatus status) {
+  switch (status) {
+    case LiquidityStatus.available:
+      return "سيولة متوفرة";
+    case LiquidityStatus.crowded:
+      return "مزدحم";
+    case LiquidityStatus.empty:
+      return "فارغ";
+    default:
+      return "غير معروف";
+  }
+}
+
+// --- Mini Branch Map Widget ---
+
+class MiniBranchMap extends StatelessWidget {
+  final Branch branch;
+
+  const MiniBranchMap({super.key, required this.branch});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 128, // h-32
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[100],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: LatLng(branch.lat, branch.lng),
+            initialZoom: 15.0,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.none, // Disable all interactions
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.example.libyan_banking_hub',
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: LatLng(branch.lat, branch.lng),
+                  width: 16,
+                  height: 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: getStatusColor(branch.status),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Main Branch Map Widget ---
+
 class BranchMap extends StatefulWidget {
   final List<Branch> branches;
-  final Function(Branch)? onViewDetails;
+  final Function(Branch) onViewDetails;
+  final Function(Branch)? onReport;
 
-  const BranchMap({super.key, required this.branches, this.onViewDetails});
+  const BranchMap({
+    super.key,
+    required this.branches,
+    required this.onViewDetails,
+    this.onReport,
+  });
 
   @override
   State<BranchMap> createState() => _BranchMapState();
 }
 
 class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
-  LatLng? _userLocation;
   final MapController _mapController = MapController();
-  final LatLng _defaultLocation = const LatLng(32.8872, 13.1913);
+  static const LatLng _defaultCenter = LatLng(32.8872, 13.1913); // Tripoli
+  static const double _defaultZoom = 12.0;
+
   Branch? _selectedBranch;
+  bool _isLocating = false;
+  LatLng? _userLocation;
 
   @override
   void initState() {
     super.initState();
-    _determinePosition();
+    // Fit bounds on init if branches exist
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fitBounds();
+    });
+  }
+
+  void _fitBounds() {
+    if (widget.branches.isEmpty || _selectedBranch != null) return;
+
+    final bounds = LatLngBounds.fromPoints(
+      widget.branches.map((b) => LatLng(b.lat, b.lng)).toList(),
+    );
+    _mapController.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+    );
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
@@ -54,46 +169,76 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
     controller.forward();
   }
 
-  Future<void> _determinePosition() async {
+  Future<void> _handleLocateMe() async {
+    setState(() => _isLocating = true);
+
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    if (!serviceEnabled) {
+      _showError("خدمات الموقع غير مفعلة.");
+      setState(() => _isLocating = false);
+      return;
+    }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
+      if (permission == LocationPermission.denied) {
+        _showError("تم رفض إذن الوصول للموقع.");
+        setState(() => _isLocating = false);
+        return;
+      }
     }
 
-    if (permission == LocationPermission.deniedForever) return;
+    if (permission == LocationPermission.deniedForever) {
+      _showError("إذن الموقع مرفوض بشكل دائم.");
+      setState(() => _isLocating = false);
+      return;
+    }
 
-    Position position = await Geolocator.getCurrentPosition();
-    if (mounted) {
+    try {
+      final position = await Geolocator.getCurrentPosition();
       setState(() {
         _userLocation = LatLng(position.latitude, position.longitude);
+        _isLocating = false;
       });
       _animatedMapMove(_userLocation!, 14.0);
+    } catch (e) {
+      _showError("حدث خطأ أثناء تحديد الموقع.");
+      setState(() => _isLocating = false);
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _handleResetView() {
+    _animatedMapMove(_defaultCenter, _defaultZoom);
+    setState(() => _selectedBranch = null);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Stack(
       children: [
+        // 1. The Map
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: _defaultLocation,
-            initialZoom: 13.0,
-            onTap: (_, __) => setState(() => _selectedBranch = null),
+            initialCenter: _defaultCenter,
+            initialZoom: _defaultZoom,
+            onTap: (_, __) {
+              setState(() => _selectedBranch = null);
+            },
           ),
           children: [
             TileLayer(
-              urlTemplate: isDarkMode
+              urlTemplate: isDark
                   ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.example.libyan_banking_hub',
@@ -101,86 +246,64 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
             ),
             MarkerLayer(
               markers: [
+                // Branch Markers
                 ...widget.branches.map((branch) {
-                  Color statusColor;
-                  switch (branch.status) {
-                    case LiquidityStatus.available:
-                      statusColor = Colors.green;
-                      break;
-                    case LiquidityStatus.crowded:
-                      statusColor = Colors.orange;
-                      break;
-                    case LiquidityStatus.empty:
-                      statusColor = Colors.red;
-                      break;
-                    default:
-                      statusColor = Colors.grey;
-                  }
-
+                  final color = getStatusColor(branch.status);
                   final isSelected = _selectedBranch?.id == branch.id;
 
                   return Marker(
                     point: LatLng(branch.lat, branch.lng),
-                    width: isSelected ? 70 : 50,
-                    height: isSelected ? 70 : 50,
+                    width: isSelected ? 50 : 30,
+                    height: isSelected ? 50 : 30,
                     child: GestureDetector(
                       onTap: () {
-                        setState(() => _selectedBranch = branch);
                         _animatedMapMove(LatLng(branch.lat, branch.lng), 15.0);
+                        setState(() => _selectedBranch = branch);
                       },
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: isSelected ? 70 : 50,
-                            height: isSelected ? 70 : 50,
-                            decoration: BoxDecoration(
-                              color: (isSelected ? Colors.blue : statusColor).withAlpha(100),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          Container(
-                            width: 35,
-                            height: 35,
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: isSelected ? Colors.blue : statusColor, width: 2),
-                            ),
-                            child: Icon(
-                              branch.isAtm ? Icons.atm : Icons.account_balance,
-                              size: 20,
-                              color: isSelected ? Colors.blue : statusColor,
-                            ),
-                          ),
-                        ],
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.blue : color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: isSelected ? 4 : 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: isSelected
+                            ? Icon(branch.isAtm ? Icons.atm : Icons.account_balance, color: Colors.white, size: 20)
+                            : null,
                       ),
                     ),
                   );
                 }),
+                // User Location Marker
                 if (_userLocation != null)
                   Marker(
                     point: _userLocation!,
-                    width: 40,
-                    height: 40,
+                    width: 24,
+                    height: 24,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         Container(
-                          width: 20,
-                          height: 20,
                           decoration: BoxDecoration(
-                            color: Colors.blue.withAlpha(100),
                             shape: BoxShape.circle,
+                            color: Colors.blue.withOpacity(0.3),
                           ),
                         ),
                         Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
                             color: Colors.blue,
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
                           ),
                         ),
                       ],
@@ -190,121 +313,258 @@ class _BranchMapState extends State<BranchMap> with TickerProviderStateMixin {
             ),
           ],
         ),
-        
-        // Persistent Bottom Sheet for Selected Branch
+
+        // 2. Control Buttons (Reset & Locate)
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          bottom: _selectedBranch != null ? 260 : 20, // Move up if sheet is open
+          right: 20,
+          child: Column(
+            children: [
+              _buildMapBtn(
+                icon: Icons.refresh,
+                onTap: _handleResetView,
+                tooltip: "إعادة تعيين",
+                isDark: isDark,
+              ),
+              const SizedBox(height: 8),
+              _buildMapBtn(
+                icon: Icons.my_location,
+                onTap: _handleLocateMe,
+                tooltip: "موقعي",
+                isLoading: _isLocating,
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ),
+
+        // 3. Legend Overlay (Hidden when selected)
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          bottom: _selectedBranch != null ? -150 : 20, // Hide offscreen
+          left: 20,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: (isDark ? const Color(0xFF1F2937) : Colors.white).withOpacity(0.9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("مفتاح الحالة", style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(height: 8),
+                _buildLegendItem(LiquidityStatus.available),
+                _buildLegendItem(LiquidityStatus.crowded),
+                _buildLegendItem(LiquidityStatus.empty),
+              ],
+            ),
+          ),
+        ),
+
+        // 4. Bottom Sheet (Branch Details)
         if (_selectedBranch != null)
           Positioned(
-            bottom: 0,
             left: 0,
             right: 0,
+            bottom: 0,
             child: TweenAnimationBuilder<double>(
               duration: const Duration(milliseconds: 300),
               tween: Tween(begin: 1.0, end: 0.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, value * 200),
-                  child: child,
-                );
-              },
+              builder: (context, value, child) => Transform.translate(
+                offset: Offset(0, value * 200),
+                child: child,
+              ),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: isDark ? const Color(0xFF1F2937) : Colors.white,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 10, offset: const Offset(0, -5))
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, -5))],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Header & Close
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(_selectedBranch!.name,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        ),
                         IconButton(
-                          icon: const Icon(Icons.close),
+                          icon: const Icon(Icons.close, size: 20),
                           onPressed: () => setState(() => _selectedBranch = null),
-                        )
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(_selectedBranch!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  if (_selectedBranch!.isAtm)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                      ),
+                                      child: const Text("ATM", style: TextStyle(color: Colors.blue, fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Expanded(child: Text(_selectedBranch!.address, style: const TextStyle(fontSize: 12, color: Colors.grey))),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(_selectedBranch!.address, style: const TextStyle(color: Colors.grey)),
                     const SizedBox(height: 16),
+
+                    // Status Bar
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.black.withOpacity(0.2) : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("آخر تحديث", style: TextStyle(fontSize: 10, color: Colors.grey)),
+                              Text(
+                                DateFormat('hh:mm a').format(_selectedBranch!.lastUpdate),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          _buildStatusBadge(_selectedBranch!.status),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Actions
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              showReportDialog(context, _selectedBranch!, (id, status) {
-                                setState(() => _selectedBranch = null);
-                              });
-                            },
-                            icon: const Icon(Icons.report_problem_outlined),
+                          child: OutlinedButton.icon(
+                            onPressed: () => showReportDialog(context, _selectedBranch!, (id, status) {
+                              if(widget.onReport != null) widget.onReport!(_selectedBranch!);
+                              setState(() => _selectedBranch = null);
+                            }),
+                            icon: const Icon(Icons.add_chart_outlined, size: 16),
                             label: const Text("إبلاغ"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange, 
-                              foregroundColor: Colors.white,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
+                          flex: 2,
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              if (widget.onViewDetails != null) {
-                                widget.onViewDetails!(_selectedBranch!);
-                              }
-                            },
-                            icon: const Icon(Icons.info_outline),
-                            label: const Text("تفاصيل"),
+                            onPressed: () => widget.onViewDetails(_selectedBranch!),
+                            icon: const Icon(Icons.info_outline, size: 16),
+                            label: const Text("عرض التفاصيل"),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green, 
+                              backgroundColor: const Color(0xFF4CAF50),
                               foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-
-        // Map Control Buttons
-        AnimatedPositioned(
-          duration: const Duration(milliseconds: 300),
-          bottom: _selectedBranch != null ? 200 : 20,
-          right: 20,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FloatingActionButton(
-                heroTag: "reset_view",
-                onPressed: () => _animatedMapMove(_defaultLocation, 13.0),
-                mini: true,
-                backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                child: const Icon(Icons.home, color: Colors.green),
-              ),
-              const SizedBox(height: 10),
-              FloatingActionButton(
-                heroTag: "my_location",
-                onPressed: _determinePosition,
-                mini: true,
-                backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                child: const Icon(Icons.my_location, color: Colors.blue),
-              ),
-            ],
-          ),
-        ),
       ],
+    );
+  }
+
+  // --- Sub-widgets builders ---
+
+  Widget _buildMapBtn({required IconData icon, required VoidCallback onTap, required String tooltip, bool isLoading = false, required bool isDark}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[100]!),
+      ),
+      child: IconButton(
+        icon: isLoading
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            : Icon(icon, size: 20),
+        onPressed: isLoading ? null : onTap,
+        tooltip: tooltip,
+        color: isDark ? Colors.white : Colors.grey[700],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(LiquidityStatus status) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: getStatusColor(status),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 1),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(getStatusText(status), style: const TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(LiquidityStatus status) {
+    Color color = getStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Text(getStatusText(status), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(width: 6),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+        ],
+      ),
     );
   }
 }

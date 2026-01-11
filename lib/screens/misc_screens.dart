@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -217,252 +218,351 @@ class AddDataScreen extends StatefulWidget {
 
 class _AddDataScreenState extends State<AddDataScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final _bankFormKey = GlobalKey<FormState>();
-  final _branchFormKey = GlobalKey<FormState>();
-  
+  // Tab State
+  String _activeTab = 'BANK'; // 'BANK' or 'BRANCH'
+
+  // Bank Form Controllers
   final _bankNameController = TextEditingController();
-  final _bankCityController = TextEditingController(text: "طرابلس");
-  
+  final _bankCityController = TextEditingController();
+  final _bankFormKey = GlobalKey<FormState>();
+
+  // Branch Form Controllers
   final _branchNameController = TextEditingController();
   final _branchAddressController = TextEditingController();
+  final _branchFormKey = GlobalKey<FormState>();
+  
   String? _selectedBankId;
-
-  // Location State
-  LatLng _selectedLocation = const LatLng(32.8872, 13.1913);
-  bool _isGettingLocation = false;
+  bool _isAtm = false;
 
   @override
   void initState() {
-    _tabController = TabController(length: 2, vsync: this);
-    if (widget.banks.isNotEmpty) _selectedBankId = widget.banks.first.id;
     super.initState();
+    if (widget.banks.isNotEmpty) {
+      _selectedBankId = widget.banks[0].id;
+    }
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isGettingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
+  @override
+  void dispose() {
+    _bankNameController.dispose();
+    _bankCityController.dispose();
+    _branchNameController.dispose();
+    _branchAddressController.dispose();
+    super.dispose();
+  }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
+  // --- Handlers ---
 
-      Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _selectedLocation = LatLng(position.latitude, position.longitude);
-        _isGettingLocation = false;
-      });
-    } catch (e) {
-      setState(() => _isGettingLocation = false);
+  void _handleBankSubmit() {
+    if (_bankFormKey.currentState!.validate()) {
+      final name = _bankNameController.text;
+      
+      final newBank = Bank(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        city: _bankCityController.text,
+        logoUrl: "https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=random&color=fff",
+      );
+
+      widget.onAddBank(newBank);
+
+      // Reset
+      _bankNameController.clear();
+      _bankCityController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إضافة المصرف بنجاح')));
+    }
+  }
+
+  void _handleBranchSubmit() {
+    if (_branchFormKey.currentState!.validate() && _selectedBankId != null) {
+      final random = Random();
+      
+      final newBranch = Branch(
+        id: "new-${DateTime.now().millisecondsSinceEpoch}",
+        bankId: _selectedBankId!,
+        name: _branchNameController.text,
+        address: _branchAddressController.text.isNotEmpty 
+            ? _branchAddressController.text 
+            : _bankCityController.text, // Fallback
+        // Simulate random coordinates around Tripoli
+        lat: 32.88 + (random.nextDouble() * 0.1),
+        lng: 13.19 + (random.nextDouble() * 0.1),
+        isAtm: _isAtm,
+        status: LiquidityStatus.unknown,
+        lastUpdate: DateTime.now(),
+        crowdLevel: 0,
+      );
+
+      widget.onAddBranch(newBranch);
+
+      // Reset
+      _branchNameController.clear();
+      _branchAddressController.clear();
+      setState(() => _isAtm = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إضافة الفرع بنجاح')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("إضافة بيانات جديدة"),
         leading: IconButton(
             icon: const Icon(Icons.close), onPressed: widget.onCancel),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.green,
-          labelColor: Colors.green,
-          unselectedLabelColor: Colors.grey,
-          tabs: const [
-            Tab(icon: Icon(Icons.account_balance), text: "إضافة مصرف"),
-            Tab(icon: Icon(Icons.store), text: "إضافة فرع"),
-          ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1F2937) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // --- Tabs ---
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[100]!)),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildTab('BANK', 'إضافة مصرف', primaryColor, isDark),
+                      _buildTab('BRANCH', 'إضافة فرع', primaryColor, isDark),
+                    ],
+                  ),
+                ),
+
+                // --- Form Content ---
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: _activeTab == 'BANK' 
+                    ? _buildBankForm(isDark, primaryColor) 
+                    : _buildBranchForm(isDark, primaryColor),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+    );
+  }
+
+  // --- UI Helpers ---
+
+  Widget _buildTab(String id, String label, Color primaryColor, bool isDark) {
+    final isActive = _activeTab == id;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _activeTab = id),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isActive 
+              ? (isDark ? primaryColor.withOpacity(0.2) : const Color(0xFFEFF6FF))
+              : null,
+            border: isActive 
+              ? Border(bottom: BorderSide(color: primaryColor, width: 2)) 
+              : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: isActive 
+                ? primaryColor 
+                : (isDark ? Colors.grey[400] : Colors.grey[500]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBankForm(bool isDark, Color primaryColor) {
+    return Form(
+      key: _bankFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Form 1: Bank
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _bankFormKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("معلومات المصرف", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _bankNameController,
-                    decoration: InputDecoration(
-                      labelText: "اسم المصرف",
-                      prefixIcon: const Icon(Icons.business),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    validator: (v) => v!.isEmpty ? "يرجى إدخال الاسم" : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _bankCityController,
-                    decoration: InputDecoration(
-                      labelText: "المدينة الرئيسية",
-                      prefixIcon: const Icon(Icons.location_city),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_bankFormKey.currentState!.validate()) {
-                        HapticFeedback.mediumImpact();
-                        widget.onAddBank(Bank(
-                            id: DateTime.now().toString(),
-                            name: _bankNameController.text,
-                            city: _bankCityController.text,
-                            logoUrl: "https://picsum.photos/seed/${_bankNameController.text}/200"));
-                        _bankNameController.clear();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("حفظ بيانات المصرف", style: TextStyle(color: Colors.white, fontSize: 16)),
-                  )
-                ],
-              ),
-            ),
-          ),
-          // Form 2: Branch
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _branchFormKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("معلومات الفرع", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
-                    value: _selectedBankId,
-                    decoration: InputDecoration(
-                      labelText: "اختر المصرف التابع له",
-                      prefixIcon: const Icon(Icons.account_balance),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    items: widget.banks
-                        .map((b) => DropdownMenuItem(value: b.id, child: Text(b.name)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedBankId = v),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _branchNameController,
-                    decoration: InputDecoration(
-                      labelText: "اسم الفرع أو موقع الصراف",
-                      prefixIcon: const Icon(Icons.location_on),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    validator: (v) => v!.isEmpty ? "يرجى إدخال اسم الفرع" : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _branchAddressController,
-                    decoration: InputDecoration(
-                      labelText: "العنوان التفصيلي",
-                      prefixIcon: const Icon(Icons.map_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    validator: (v) => v!.isEmpty ? "يرجى إدخال العنوان" : null,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text("موقع الفرع على الخريطة", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        children: [
-                          FlutterMap(
-                            options: MapOptions(
-                              initialCenter: _selectedLocation,
-                              initialZoom: 14.0,
-                              onTap: (tapPosition, point) => setState(() => _selectedLocation = point),
-                            ),
-                            children: [
-                              TileLayer(
-                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'com.example.libyan_banking_hub',
-                              ),
-                              MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: _selectedLocation,
-                                    width: 40,
-                                    height: 40,
-                                    child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Positioned(
-                            bottom: 10,
-                            right: 10,
-                            child: FloatingActionButton.small(
-                              onPressed: _getCurrentLocation,
-                              backgroundColor: Colors.white,
-                              child: _isGettingLocation 
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Icon(Icons.my_location, color: Colors.blue),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text("اضغط على الخريطة لتحديد الموقع بدقة", style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_branchFormKey.currentState!.validate()) {
-                        HapticFeedback.mediumImpact();
-                        widget.onAddBranch(Branch(
-                            id: "new-${DateTime.now()}",
-                            bankId: _selectedBankId!,
-                            name: _branchNameController.text,
-                            address: _branchAddressController.text,
-                            lat: _selectedLocation.latitude,
-                            lng: _selectedLocation.longitude,
-                            isAtm: _branchNameController.text.toLowerCase().contains("atm") || _branchNameController.text.contains("صراف"),
-                            status: LiquidityStatus.unknown,
-                            lastUpdate: DateTime.now(),
-                            crowdLevel: 0));
-                        _branchNameController.clear();
-                        _branchAddressController.clear();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("إضافة الفرع الآن", style: TextStyle(color: Colors.white, fontSize: 16)),
-                  )
-                ],
-              ),
-            ),
-          ),
+          _buildLabel("اسم المصرف", isDark),
+          _buildInput(_bankNameController, "مثال: مصرف الجمهورية", isDark),
+          const SizedBox(height: 16),
+          
+          _buildLabel("المدينة الرئيسية", isDark),
+          _buildInput(_bankCityController, "مثال: طرابلس", isDark),
+          const SizedBox(height: 24),
+          
+          _buildSubmitButton("حفظ المصرف", _handleBankSubmit, primaryColor),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBranchForm(bool isDark, Color primaryColor) {
+    return Form(
+      key: _branchFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildLabel("اختر المصرف", isDark),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF111827) : Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isDark ? Colors.grey[600]! : Colors.grey[200]!),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButtonFormField<String>(
+                value: _selectedBankId,
+                decoration: const InputDecoration(border: InputBorder.none),
+                dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+                items: widget.banks.map((bank) {
+                  return DropdownMenuItem(
+                    value: bank.id,
+                    child: Text(bank.name, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => _selectedBankId = val),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _buildLabel("اسم الفرع", isDark),
+          _buildInput(_branchNameController, "مثال: فرع ذات العماد", isDark),
+          const SizedBox(height: 16),
+
+          _buildLabel("العنوان", isDark),
+          _buildInput(_branchAddressController, "مثال: طريق الشط", isDark, isRequired: false),
+          const SizedBox(height: 16),
+
+          // Checkbox
+          Row(
+            children: [
+              SizedBox(
+                height: 24,
+                width: 24,
+                child: Checkbox(
+                  value: _isAtm,
+                  activeColor: primaryColor,
+                  onChanged: (val) => setState(() => _isAtm = val ?? false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "يحتوي على صراف آلي (ATM)",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Info Box
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E3A8A).withOpacity(0.2) : const Color(0xFFEFF6FF), // blue-50
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE), // blue-100
+              ),
+            ),
+            child: Text(
+              "ملاحظة: سيتم تحديد موقع الفرع تلقائياً بشكل تقريبي على الخريطة في هذه النسخة التجريبية.",
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey[400] : Colors.grey[500],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          _buildSubmitButton("حفظ الفرع", _handleBranchSubmit, primaryColor),
+        ],
+      ),
+    );
+  }
+
+  // --- Input Helpers ---
+
+  Widget _buildLabel(String text, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        textAlign: TextAlign.start,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: isDark ? Colors.grey[300] : Colors.grey[700],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInput(TextEditingController controller, String hint, bool isDark, {bool isRequired = true}) {
+    return TextFormField(
+      controller: controller,
+      textAlign: TextAlign.start,
+      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+      validator: isRequired ? (value) {
+        if (value == null || value.isEmpty) return 'هذا الحقل مطلوب';
+        return null;
+      } : null,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
+        filled: true,
+        fillColor: isDark ? const Color(0xFF111827) : Colors.grey[50],
+        contentPadding: const EdgeInsets.all(12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: isDark ? Colors.grey[600]! : Colors.grey[200]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: isDark ? Colors.grey[600]! : Colors.grey[200]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(String text, VoidCallback onPressed, Color primaryColor) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          elevation: 4,
+          shadowColor: primaryColor.withOpacity(0.3),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ),
     );
   }
