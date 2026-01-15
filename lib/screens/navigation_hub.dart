@@ -91,11 +91,9 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
         onCancel: () => setState(() => _view = 'HOME'),
         onAddBank: (b) {
           ref.read(banksProvider.notifier).addBank(b);
-          setState(() => _view = 'HOME');
         },
         onAddBranch: (b) {
           ref.read(branchesProvider.notifier).addBranch(b);
-          setState(() => _view = 'HOME');
         },
       );
     }
@@ -221,6 +219,10 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
             final bank = ref.read(banksProvider).firstWhere((b) => b.id == branch.bankId);
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => BankDetailsScreen(bank: bank)));
           },
+          onReport: (id, status) {
+            ref.read(branchesProvider.notifier).updateBranchStatus(id, status);
+            ref.read(reportCountProvider.notifier).increment();
+          },
         );
       case 'EMERGENCY': return _buildEmergencyContacts();
       case 'PROFILE': return ProfileScreen(onLogout: () => setState(() => _view = 'AUTH'));
@@ -238,7 +240,7 @@ class _NavigationHubState extends ConsumerState<NavigationHub> {
       if (_homeTab == 'FAVORITES' && !favorites.contains(bank.id)) return false;
       bool matchesSearch = _searchTerm.isEmpty || bank.name.contains(_searchTerm) || branches.any((br) => br.bankId == bank.id && br.address.contains(_searchTerm));
       if (!matchesSearch) return false;
-      if (_selectedCity != 'الكل' && !bank.city.contains(_selectedCity)) return false;
+      if (_selectedCity != 'الكل' && bank.city != _selectedCity) return false;
       if (_showAvailableOnly && !branches.any((b) => b.bankId == bank.id && b.status == LiquidityStatus.available)) return false;
       return true;
     }).toList();

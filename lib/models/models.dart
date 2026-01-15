@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+
+enum AppView { splash, onboarding, auth, home, map, add, emergency, profile }
 
 enum LiquidityStatus {
   available,
@@ -95,6 +98,40 @@ class Branch {
       crowdLevel: crowdLevel ?? this.crowdLevel,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'bankId': bankId,
+      'name': name,
+      'address': address,
+      'lat': lat,
+      'lng': lng,
+      'isAtm': isAtm,
+      'status': status.index,
+      'lastUpdate': lastUpdate.millisecondsSinceEpoch,
+      'crowdLevel': crowdLevel,
+    };
+  }
+
+  factory Branch.fromMap(Map<String, dynamic> map) {
+    return Branch(
+      id: map['id'],
+      bankId: map['bankId'],
+      name: map['name'],
+      address: map['address'],
+      lat: map['lat'],
+      lng: map['lng'],
+      isAtm: map['isAtm'],
+      status: LiquidityStatus.values[map['status']],
+      lastUpdate: DateTime.fromMillisecondsSinceEpoch(map['lastUpdate']),
+      crowdLevel: map['crowdLevel'],
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory Branch.fromJson(String source) => Branch.fromMap(json.decode(source));
 }
 
 class Bank {
@@ -109,4 +146,26 @@ class Bank {
     required this.logoUrl,
     required this.city,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'logoUrl': logoUrl,
+      'city': city,
+    };
+  }
+
+  factory Bank.fromMap(Map<String, dynamic> map) {
+    return Bank(
+      id: map['id'],
+      name: map['name'],
+      logoUrl: map['logoUrl'],
+      city: map['city'],
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory Bank.fromJson(String source) => Bank.fromMap(json.decode(source));
 }

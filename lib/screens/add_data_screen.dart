@@ -63,23 +63,32 @@ class _AddDataScreenState extends State<AddDataScreen> with SingleTickerProvider
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isGettingLocation = true);
+    LatLng? newLocation;
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return;
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
       }
 
-      Position position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition();
+      newLocation = LatLng(position.latitude, position.longitude);
+    } catch (_) {
+      // Ignore location errors; just reset loading state.
+    } finally {
+      if (!mounted) return;
       setState(() {
-        _selectedLocation = LatLng(position.latitude, position.longitude);
+        if (newLocation != null) {
+          _selectedLocation = newLocation!;
+        }
         _isGettingLocation = false;
       });
-    } catch (e) {
-      setState(() => _isGettingLocation = false);
     }
   }
 

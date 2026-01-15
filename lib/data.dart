@@ -1,9 +1,9 @@
 import 'package:libyan_banking_hub/models/models.dart';
 
 final List<Bank> kDefaultBanks = [
-  Bank(id: '1', name: 'مصرف الجمهورية', city: 'Tripoli', logoUrl: 'https://picsum.photos/seed/gumhouria/200'),
-  Bank(id: '2', name: 'مصرف الوحدة', city: 'Benghazi', logoUrl: 'https://picsum.photos/seed/wahda/200'),
-  Bank(id: '3', name: 'مصرف الصحارى', city: 'Tripoli', logoUrl: 'https://picsum.photos/seed/sahara/200'),
+  Bank(id: '1', name: 'مصرف الجمهورية', city: 'طرابلس', logoUrl: 'https://picsum.photos/seed/gumhouria/200'),
+  Bank(id: '2', name: 'مصرف الوحدة', city: 'بنغازي', logoUrl: 'https://picsum.photos/seed/wahda/200'),
+  Bank(id: '3', name: 'مصرف الصحارى', city: 'طرابلس', logoUrl: 'https://picsum.photos/seed/sahara/200'),
   // ... أضف البقية
 ];
 

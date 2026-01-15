@@ -10,27 +10,81 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 
 // 1. Provider for Banks
 final banksProvider = StateNotifierProvider<BanksNotifier, List<Bank>>((ref) {
-  return BanksNotifier();
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return BanksNotifier(prefs);
 });
 
 class BanksNotifier extends StateNotifier<List<Bank>> {
-  BanksNotifier() : super(kDefaultBanks);
+  final SharedPreferences prefs;
+  static const String _key = 'banks_persistence';
+
+  BanksNotifier(this.prefs) : super(kDefaultBanks) {
+    _loadBanks();
+  }
+
+  void _loadBanks() {
+    final saved = prefs.getStringList(_key);
+    if (saved != null) {
+      final loadedBanks = saved.map((e) => Bank.fromJson(e)).toList();
+      final defaultIds = kDefaultBanks.map((b) => b.id).toSet();
+      
+      // Filter out banks that are already in defaults to avoid duplicates
+      final newBanks = loadedBanks.where((b) => !defaultIds.contains(b.id)).toList();
+      state = [...kDefaultBanks, ...newBanks];
+    }
+  }
 
   void addBank(Bank bank) {
     state = [...state, bank];
+    _saveBanks();
+  }
+
+  void _saveBanks() {
+    // Only save banks that are NOT in the default list
+    final toSave = state.where((b) => !kDefaultBanks.any((db) => db.id == b.id)).toList();
+    prefs.setStringList(_key, toSave.map((b) => b.toJson()).toList());
   }
 }
 
 // 2. Provider for Branches
 final branchesProvider = StateNotifierProvider<BranchesNotifier, List<Branch>>((ref) {
-  return BranchesNotifier();
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return BranchesNotifier(prefs);
 });
 
 class BranchesNotifier extends StateNotifier<List<Branch>> {
-  BranchesNotifier() : super(kDefaultBranches);
+  final SharedPreferences prefs;
+  static const String _key = 'branches_persistence';
+
+  BranchesNotifier(this.prefs) : super(kDefaultBranches) {
+    _loadBranches();
+  }
+
+  void _loadBranches() {
+    final saved = prefs.getStringList(_key);
+    if (saved != null) {
+      final loadedBranches = saved.map((e) => Branch.fromJson(e)).toList();
+      
+      // Create a mutable copy of defaults
+      List<Branch> newState = List.from(kDefaultBranches);
+      
+      for (final loaded in loadedBranches) {
+        final index = newState.indexWhere((b) => b.id == loaded.id);
+        if (index != -1) {
+          // Update default branch with saved state (status, lastUpdate etc)
+          newState[index] = loaded;
+        } else {
+          // Add new branch
+          newState.add(loaded);
+        }
+      }
+      state = newState;
+    }
+  }
 
   void addBranch(Branch branch) {
     state = [...state, branch];
+    _saveBranches();
   }
 
   void updateBranchStatus(String id, LiquidityStatus status) {
@@ -41,6 +95,12 @@ class BranchesNotifier extends StateNotifier<List<Branch>> {
         else
           branch,
     ];
+    _saveBranches();
+  }
+
+  void _saveBranches() {
+    // We save everything because default branches can have updated statuses
+    prefs.setStringList(_key, state.map((b) => b.toJson()).toList());
   }
 }
 
